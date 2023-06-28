@@ -1,5 +1,7 @@
+using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+using FurmAppDBot.Clients;
 using FurmAppDBot.Databases;
 using FurmAppDBot.Databases.Exceptions;
 using MongoDB.Bson;
@@ -11,47 +13,75 @@ public static class FormCommand
 {
     public static async Task AddForm(InteractionContext ctx, string formID)
     {
-        var db = MainDatabase.Instance;
-
+        // Handle a long process when interacting
         await ctx.DeferAsync(true);
 
+        // Intialize initial data.
+        var db = MainDatabase.Instance;
         var response = new DiscordWebhookBuilder();
 
         try
         {
-            await db.HandleDBProcess(async () => {
-                // Initialize database and collection
-                var client = await db.GetClient();
-                var database = client.GetDatabase(DB_CONSTANT.FORM_DATABASE_NAME);
-                var collection = database.GetCollection<BsonDocument>($"{ctx.Guild.Id}");
-
-                // Check if for registered, then abort the process
-                var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, formID);
-                var foundDoc = await collection.Find(filter).ToListAsync();
-
-                if (foundDoc.Count > 0)
-                {
-                    // Abort the process
-                    response.WithContent($"Form `{formID}` has already been registered, abort the process.");
-                    return;
-                }
-
-                // Register form into the database
-                await collection.InsertOneAsync(new BsonDocument {
-                    { DB_CONSTANT.FORM_ID_KEY, formID },
-                    { DB_CONSTANT.FORM_QUESTIONS_KEY, new BsonDocument() },
-                });
+            //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Start Checking for existing form...");
+            if (await FormInterfaceData.Exists(ctx.Guild.Id, formID))
+            {
+                //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Already Exists!");
+                response.WithContent($"Form `{formID}` has already been registered, abort the process.");
+            }
+            else
+            {
+                //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Not yet exists!");
+                var d = await FormInterfaceData.GetData(ctx.Guild.Id, formID);
+                await d.SaveData();
 
                 response.WithContent($"Successfully registered form with ID: `{formID}`");
-            });
+            }
         }
         catch (DBClientTimeoutException)
         {
-
+            response.WithContent("```Request Time Out, please try again later!```");
         }
         
-        
         await ctx.Interaction.EditOriginalResponseAsync(response);
+    }
+
+    public static async Task AddForm(CommandContext ctx, string formID)
+    {
+        // Handle a long process when interacting
+        var msgHandler = await ctx.RespondAsync("please wait for a moment...");
+
+        // Intialize initial data.
+        var db = MainDatabase.Instance;
+        var response = new DiscordMessageBuilder();
+
+        try
+        {
+            //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Start Checking for existing form...");
+            if (await FormInterfaceData.Exists(ctx.Guild.Id, formID))
+            {
+                //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Already Exists!");
+                response.WithContent($"Form `{formID}` has already been registered, abort the process.");
+            }
+            else
+            {
+                //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Not yet exists!");
+                var d = await FormInterfaceData.GetData(ctx.Guild.Id, formID);
+                await d.SaveData();
+
+                response.WithContent($"Successfully registered form with ID: `{formID}`");
+            }
+        }
+        catch (DBClientTimeoutException)
+        {
+            response.WithContent("```Request Time Out, please try again later!```");
+        }
+        
+        await msgHandler.ModifyAsync(response);
+    }
+
+    public static async Task DeleteForm(InteractionContext ctx)
+    {
+        await Task.CompletedTask;
     }
 
     public static async Task GetAllForm(InteractionContext ctx)
@@ -71,31 +101,39 @@ public static class FormCommand
             Title = $"List of Forms (Page {page + 1})",
         };
 
-        await db.HandleDBProcess(async () => {
-            var client = await db.GetClient();
-            var database = client.GetDatabase(DB_CONSTANT.FORM_DATABASE_NAME);
-            var collection = database.GetCollection<BsonDocument>($"{ctx.Guild.Id}");
+        try
+        {
+            await db.HandleDBProcess(async () => {
+                // Init collection from database.
+                var collection = await db.InitCollection(ctx.Guild.Id, DB_CONSTANT.FORM_DATABASE_NAME);
 
-            var filter = Builders<BsonDocument>.Filter.Empty;
-            var documents = await collection.Find(filter).Skip(page * limitData).Limit(limitData).ToListAsync();
+                // Get all collection information.
+                var filter = Builders<BsonDocument>.Filter.Empty;
+                var documents = await collection.Find(filter).Skip(page * limitData).Limit(limitData).ToListAsync();
 
-            if (documents.Count == 0)
-            {
-                embed.Title = "No Forms Yet";
-                embed.Description = $"Currently there are no form registered, "
-                    + $"consider to create one using command `{CMD_CONSTANT.ADD_FORM_COMMAND_NAME}`";
-                return;
-            }
+                if (documents.Count == 0)
+                {
+                    embed.Title = "No Forms Yet";
+                    embed.Description = $"Currently there are no form registered, "
+                        + $"consider to create one using command `{CMD_CONSTANT.ADD_FORM_COMMAND_NAME}`";
+                    return;
+                }
 
-            string formID;
-            int formCount = 0;
-            foreach (var doc in documents)
-            {
-                formID = doc[DB_CONSTANT.FORM_ID_KEY].AsString;
-                formCount++;
-                embed.Description += $"> {formCount}. `{formID}`\n";
-            }
-        });
+                string formID;
+                int formCount = 0;
+                foreach (var doc in documents)
+                {
+                    formID = doc[DB_CONSTANT.FORM_ID_KEY].AsString;
+                    formCount++;
+                    embed.Description += $"> {formCount}. `{formID}`\n";
+                }
+            });
+        }
+        catch (DBClientTimeoutException)
+        {
+            response.WithContent("```Request Time Out, please try again later!```");
+            await ctx.Interaction.EditOriginalResponseAsync(response);
+        }
 
         response.AddEmbed(embed);
         await ctx.Interaction.EditOriginalResponseAsync(response);

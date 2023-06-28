@@ -5,12 +5,13 @@ using FurmAppDBot.Databases.Exceptions;
 
 namespace FurmAppDBot.Commands.Providers;
 
-public class MessageIDChoiceProvider : IChoiceProvider
+public class MessageIDChoiceProvider : ChoiceProvider
 {
     #region IChoiceProvider
 
-    public Task<IEnumerable<DiscordApplicationCommandOptionChoice>> Provider()
+    public override Task<IEnumerable<DiscordApplicationCommandOptionChoice>> Provider()
     {
+        //var context = Services.GetService<InteractionContext>();
         return Task.FromResult(new List<DiscordApplicationCommandOptionChoice>().AsEnumerable());
     }
 

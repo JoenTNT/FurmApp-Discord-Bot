@@ -13,18 +13,37 @@ public class CommandNextFunctions : BaseCommandModule
     public async Task Ping(CommandContext ctx) => await PingCommand.Ping(ctx);
 
     [Command(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME)]
-    public async Task GetPrefix(CommandContext ctx) => await PrefixCommand.GetPrefix(ctx);
+    public async Task GetPrefix(CommandContext ctx)
+        => await PrefixCommand.GetPrefix(ctx);
 
     [Command(CMD_CONSTANT.PURGE_COMMAND_NAME)]
     [RequirePermissions(Permissions.ManageGuild)]
-    public async Task Purge(CommandContext ctx, string purgeAmount) => await PurgeCommand.Purge(ctx, purgeAmount);
+    public async Task Purge(CommandContext ctx, string purgeAmount)
+        => await PurgeCommand.Purge(ctx, purgeAmount);
 
     [Command(CMD_CONSTANT.SET_BUTTON_COMMAND_NAME)]
     [RequirePermissions(Permissions.ManageGuild)]
-    public async Task SetButton(CommandContext ctx, string messageID) => await ButtonCommand.SetButton(ctx, messageID);
+    public async Task SetButton(CommandContext ctx, string messageID)
+        => await ButtonCommand.SetButton(ctx, messageID);
+
+    [Command(CMD_CONSTANT.SET_BUTTON_COMMAND_NAME)]
+    [RequirePermissions(Permissions.ManageGuild)]
+    public async Task GetButton(CommandContext ctx, string messageID)
+        => await ButtonCommand.GetButton(ctx, messageID);
+
+    [Command(CMD_CONSTANT.REMOVE_BUTTON_COMMAND_NAME)]
+    [RequirePermissions(Permissions.ManageGuild)]
+    public async Task RemoveButton(CommandContext ctx, string messageID, string? buttonID = null)
+        => await ButtonCommand.RemoveButton(ctx, messageID, buttonID);
+
+    [Command(CMD_CONSTANT.ADD_FORM_COMMAND_NAME)]
+    [RequirePermissions(Permissions.ManageGuild)]
+    public async Task AddForm(CommandContext ctx, string formID)
+        => await FormCommand.AddForm(ctx, formID);
 
     [Command(CMD_CONSTANT.HELP_COMMAND_NAME)]
-    public async Task Help(CommandContext ctx) => await HelpCommand.Help(ctx);
+    public async Task Help(CommandContext ctx, string commandName)
+        => await HelpCommand.Help(ctx, commandName);
 
     [Command("syncdb")]
     [DeveloperOnly]

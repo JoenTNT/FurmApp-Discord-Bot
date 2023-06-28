@@ -13,11 +13,42 @@ public static class HelpCommand
         Description = $"Here's the summary list of commands:\n"
             + $"`{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.PING_COMMAND_NAME}`: {CMD_CONSTANT.PING_COMMAND_DESCRIPTION}\n"
             + $"`{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME}`: {CMD_CONSTANT.HELP_COMMAND_DESCRIPTION}\n"
-            + $"`{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.SET_BUTTON_COMMAND_NAME}`: {CMD_CONSTANT.SET_BUTTON_COMMAND_DESCRIPTION}`",
+            + $"`{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.SET_BUTTON_COMMAND_NAME}`: {CMD_CONSTANT.SET_BUTTON_COMMAND_DESCRIPTION}`\n"
+            + $"`{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.REMOVE_BUTTON_COMMAND_NAME}`: {CMD_CONSTANT.REMOVE_BUTTON_COMMAND_DESCRIPTION}`\n"
+            + $"`{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.ADD_FORM_COMMAND_NAME}`: {CMD_CONSTANT.ADD_FORM_COMMAND_DESCRIPTION}`\n",
         Title = "HELP (Main Page)",
     };
 
-    public static async Task Help(InteractionContext ctx)
+    public static async Task Help(InteractionContext ctx, string? commandName = null)
+    {
+        // Check any command for help.
+        if (string.IsNullOrEmpty(commandName))
+        {
+            await MainHelp(ctx);
+            return;
+        }
+        
+        // Check for specific help.
+        switch (commandName.ToLower())
+        {
+            case CMD_CONSTANT.PING_COMMAND_NAME:
+                break;
+            
+            case CMD_CONSTANT.HELP_COMMAND_NAME:
+                break;
+
+            case CMD_CONSTANT.SET_BUTTON_COMMAND_NAME:
+                break;
+
+            case CMD_CONSTANT.REMOVE_BUTTON_COMMAND_NAME:
+                break;
+
+            case CMD_CONSTANT.ADD_FORM_COMMAND_NAME:
+                break;
+        }
+    }
+    
+    public static async Task MainHelp(InteractionContext ctx)
     {
         var interactivity = ctx.Client.GetInteractivity();
 
@@ -37,7 +68,7 @@ public static class HelpCommand
         await ctx.Interaction.EditOriginalResponseAsync(messageBuilder);
     }
 
-    public static async Task Help(CommandContext ctx)
+    public static async Task Help(CommandContext ctx, string? commandName = null)
     {
         var interactivity = ctx.Client.GetInteractivity();
         

@@ -16,11 +16,11 @@ public class MainDatabase
 
     private static MainDatabase s_instance;
 
-    private const string CONNECTION_URL = "mongodb+srv://<username>:<password>@cluster0.gefnhnd.mongodb.net/?retryWrites=true&w=majority";
+    //private const string CONNECTION_URL = "mongodb+srv://<username>:<password>@cluster0.gefnhnd.mongodb.net/?retryWrites=true&w=majority";
+    private const string CONNECTION_URL = "mongodb://localhost:27017";
 
     private ILogger<Worker>? _logger = null;
     private IConfiguration? _config = null;
-    private List<string>? _registeredCollections = null;
 
     private MongoClientSettings? _settings = null;
     private MongoClient? _client = null;
@@ -65,58 +65,44 @@ public class MainDatabase
     /// Adds a new guildID as a collection.
     /// </summary>
     /// <param name="guildID">Yet registered Guild ID</param>
-    public async Task AddNewGuildCollection(ulong guildID)
+    /// <exception cref="DBClientTimeoutException">
+    /// When database client connection timeout happens.
+    /// </exception>
+    public async Task<IMongoCollection<BsonDocument>> InitCollection(ulong guildID, string databaseName)
     {
-        if (await IsGuildRegistered(guildID)) return;
-
-        var dummy = new BsonDocument();
+        // Creates a dummy database
+        IMongoDatabase? database = null;
+        IMongoCollection<BsonDocument>? collection = null;
 
         // Initialize databases
-        var databaseInterface = _client?.GetDatabase(DB_CONSTANT.INTERFACE_DATABASE_NAME);
-        var databaseForm = _client?.GetDatabase(DB_CONSTANT.FORM_DATABASE_NAME);
-        var databaseSubmission = _client?.GetDatabase(DB_CONSTANT.SUBMISSION_DATABASE_NAME);
-        var databaseBackup = _client?.GetDatabase(DB_CONSTANT.BACKUP_DATABASE_NAME);
+        await HandleDBProcess(async () => {
+            // Init database
+            database = _client.GetDatabase(databaseName);
 
-        // Create new collection (pretend not exists yet)
-        var newCollectionInterface = databaseInterface?.GetCollection<BsonDocument>($"{guildID}");
-        var newCollectionForm = databaseForm?.GetCollection<BsonDocument>($"{guildID}");
-        var newCollectionSubmission = databaseSubmission?.GetCollection<BsonDocument>($"{guildID}");
-        var newCollectionBackup = databaseBackup?.GetCollection<BsonDocument>($"{guildID}");
+            // Check if the collection has already exists, then abort process.
+            var cols = await database.ListCollectionNames().ToListAsync();
+            if (cols.Any(i => i == $"{guildID}"))
+            {
+                collection = database.GetCollection<BsonDocument>($"{guildID}");
+                return;
+            }
 
-        // Initialize collection
-        if (newCollectionInterface != null)
-        {
-            await newCollectionInterface.InsertOneAsync(dummy);
-            await newCollectionInterface.DeleteOneAsync(dummy);
-        }
+            // Initialize collection
+            await database.CreateCollectionAsync($"{guildID}");
+            collection = database.GetCollection<BsonDocument>($"{guildID}");
+        });
 
-        if (newCollectionForm != null)
-        {
-            await newCollectionForm.InsertOneAsync(dummy);
-            await newCollectionForm.DeleteOneAsync(dummy);
-        }
-        
-        if (newCollectionSubmission != null)
-        {
-            await newCollectionSubmission.InsertOneAsync(dummy);
-            await newCollectionSubmission.DeleteOneAsync(dummy);
-        }
-        
-        if (newCollectionBackup != null)
-        {
-            await newCollectionBackup.InsertOneAsync(dummy);
-            await newCollectionBackup.DeleteOneAsync(dummy);
-        }
+        return collection;
     }
 
-    public async Task<bool> IsGuildRegistered(ulong guildID)
-    {
-        if (_registeredCollections == null)
-            _registeredCollections = await InitGuildList();
-
-        return _registeredCollections.Any((id) => id == $"{guildID}");
-    }
-
+    /// <summary>
+    /// Handle attempting to connect to the server.
+    /// Run this when the database client is not connected.
+    /// </summary>
+    /// <returns>Newly connected client</returns>
+    /// <exception cref="DBClientTimeoutException">
+    /// When database client connection timeout happens.
+    /// </exception>
     internal async Task<MongoClient> AttemptReconnect()
     {
         _client = new MongoClient(_settings);
@@ -139,7 +125,7 @@ public class MainDatabase
         return _client;
     }
 
-    private async Task<List<string>> InitGuildList()
+    private async Task<List<string>> InitCollectionList()
     {
         IMongoDatabase? database = null;
         List<string> result = new();
@@ -159,7 +145,7 @@ public class MainDatabase
     /// </summary>
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
-    /// </exceptiion>
+    /// </exception>
     public async Task DeleteAllUnusedMissingMessage(DiscordGuild guild)
     {
         FilterDefinition<BsonDocument> filterByChannel;
@@ -256,9 +242,6 @@ public class MainDatabase
         };
 
         await s_instance.AttemptReconnect();
-
-        //logger.LogInformation(s_instance._url);
-        //s_instance.TestMethod().Wait();
     }
 
     /// <summary>
@@ -267,7 +250,7 @@ public class MainDatabase
     /// <param name="func">Must contains database process.</param>
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
-    /// </exceptiion>
+    /// </exception>
     public async Task HandleDBProcess(Func<Task> func)
     {
         var tries = LIMIT_TRIES;

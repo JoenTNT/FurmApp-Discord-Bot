@@ -8,6 +8,7 @@ using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using FurmAppDBot.Clients;
 using FurmAppDBot.Databases;
+using FurmAppDBot.Databases.Exceptions;
 
 namespace FurmAppDBot.Commands;
 
@@ -305,14 +306,24 @@ public static class ButtonCommand
 
             await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Please wait for seconds to edit the message..."));
 
-            // Save to database
+            // Handle updating and saving data to database
             //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Adding new button interface data...");
-            ButtonInterfaceData buttonInterfaceData = await ButtonInterfaceData.GetData(
-                targetMessage.Channel.Guild.Id,
-                targetMessage.Channel.Id
-            );
-            buttonInterfaceData.AddButton($"{targetMessage.Id}", buttonID);
-            await buttonInterfaceData.SaveData();
+            try
+            {
+                ButtonInterfaceData buttonInterfaceData = await ButtonInterfaceData.GetData(
+                    targetMessage.Channel.Guild.Id,
+                    targetMessage.Channel.Id
+                );
+                buttonInterfaceData.AddButton($"{targetMessage.Id}", buttonID);
+                await buttonInterfaceData.SaveData();
+            }
+            catch (DBClientTimeoutException)
+            {
+                webhookMessage = new DiscordWebhookBuilder()
+                    .WithContent("```Request Time Out, please try again later!```");
+                await ctx.Interaction.EditOriginalResponseAsync(webhookMessage);
+                return;
+            }
             //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Button interface data successfully saved!");
 
             await targetMessage.ModifyAsync(modifyMessageButton);
@@ -395,8 +406,8 @@ public static class ButtonCommand
             bool iconRequired = false;
 
             // Delete immediately, and then create the mandatory message
-            await ctx.Message.DeleteAsync();
-            messageResponse = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
+            //await ctx.Message.DeleteAsync();
+            messageResponse = await ctx.Message.RespondAsync("Please wait for a moment...");
 
             // Convert string to ulong exception handle.
             try
@@ -613,14 +624,24 @@ public static class ButtonCommand
             await messageResponse.ModifyAsync(new DiscordMessageBuilder()
                 .WithContent("Please wait for seconds to edit the message..."));
 
-            // Save to database
+            // Handle updating and saving data to database
             //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Adding new button interface data...");
-            ButtonInterfaceData buttonInterfaceData = await ButtonInterfaceData.GetData(
-                targetMessage.Channel.Guild.Id,
-                targetMessage.Channel.Id
-            );
-            buttonInterfaceData.AddButton($"{targetMessage.Id}", buttonID);
-            await buttonInterfaceData.SaveData();
+            try
+            {
+                ButtonInterfaceData buttonInterfaceData = await ButtonInterfaceData.GetData(
+                    targetMessage.Channel.Guild.Id,
+                    targetMessage.Channel.Id
+                );
+                buttonInterfaceData.AddButton($"{targetMessage.Id}", buttonID);
+                await buttonInterfaceData.SaveData();
+            }
+            catch (DBClientTimeoutException)
+            {
+                messageBuilder = new DiscordMessageBuilder()
+                    .WithContent("```Request Time Out, please try again later!```");
+                await messageResponse.ModifyAsync(messageBuilder);
+                return;
+            }
             //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Button interface data successfully saved!");
 
             await targetMessage.ModifyAsync(modifyMessageButton);
@@ -641,24 +662,82 @@ public static class ButtonCommand
     /// </summary>
     public static async Task GetButton(InteractionContext ctx, string messageID)
     {
+        // Expected a longer time to process the command.
+        await ctx.DeferAsync(true);
+
+        // Init variable declaration
+        DiscordWebhookBuilder response = new DiscordWebhookBuilder();
+        DiscordEmbedBuilder embed = new DiscordEmbedBuilder {
+            Author = new DiscordEmbedBuilder.EmbedAuthor {
+                IconUrl = ctx.Client.CurrentUser.AvatarUrl,
+                Name = ctx.Client.CurrentUser.Username,
+            },
+            Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
+        };
+
         try
         {
-            // Expected a longer time to process the command.
-            await ctx.DeferAsync(ephemeral: true);
+            // Get all button from message
+            await GetButtonFromMessage(embed, ctx.Channel, ulong.Parse(messageID));
+            response.AddEmbed(embed);
 
-            //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Start getting button interface data from cache...");
-            ButtonInterfaceData data = await ButtonInterfaceData.GetData(ctx.Guild.Id, ctx.Channel.Id);
-            IReadOnlyDictionary<string, string>? detailData = data[messageID];
-            DiscordMessage targetMessage = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
-            DiscordWebhookBuilder response = new DiscordWebhookBuilder();
-            DiscordEmbedBuilder embed = new DiscordEmbedBuilder {
-                Author = new DiscordEmbedBuilder.EmbedAuthor {
-                    IconUrl = ctx.Client.CurrentUser.AvatarUrl,
-                    Name = ctx.Client.CurrentUser.Username,
-                },
-                Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
-            };
+            // Send private information message.
+            await ctx.Interaction.EditOriginalResponseAsync(response);
+        }
+        catch (DBClientTimeoutException)
+        {
+            response = new DiscordWebhookBuilder()
+                .WithContent("```Request Time Out, please try again later!```");
+            await ctx.Interaction.EditOriginalResponseAsync(response);
+            return;
+        }
+    }
 
+    /// <summary>
+    /// Receive button interface information on specific message ID.
+    /// </summary>
+    public static async Task GetButton(CommandContext ctx, string messageID)
+    {
+        // Initialize message handler.
+        DiscordMessageBuilder msgBuilder = new DiscordMessageBuilder()
+            .WithContent("Please wait for a moment...");
+        DiscordEmbedBuilder embed = new DiscordEmbedBuilder {
+            Author = new DiscordEmbedBuilder.EmbedAuthor {
+                IconUrl = ctx.Client.CurrentUser.AvatarUrl,
+                Name = ctx.Client.CurrentUser.Username,
+            },
+            Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
+        };
+        
+        // Send a message handler.
+        //await ctx.Message.DeleteAsync();
+        DiscordMessage msgHandler = await ctx.Message.RespondAsync(msgBuilder);
+
+        try
+        {
+            // Get all button from message
+            await GetButtonFromMessage(embed, ctx.Channel, ulong.Parse(messageID));
+            msgBuilder.AddEmbed(embed);
+
+            // Send information message, this will be seen publicly.
+            await msgHandler.ModifyAsync(msgBuilder);
+        }
+        catch (DBClientTimeoutException)
+        {
+            msgBuilder = new DiscordMessageBuilder()
+                .WithContent("```Request Time Out, please try again later!```");
+            await msgHandler.ModifyAsync(msgBuilder);
+        }
+    }
+
+    private static async Task GetButtonFromMessage(DiscordEmbedBuilder embed, DiscordChannel channel, ulong messageID)
+    {
+        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Start getting button interface data from cache...");
+        await MainDatabase.Instance.HandleDBProcess(async () => {
+            ButtonInterfaceData data = await ButtonInterfaceData.GetData(channel.Guild.Id, channel.Id);
+            IReadOnlyDictionary<string, string>? detailData = data[$"{messageID}"];
+            DiscordMessage targetMessage = await channel.GetMessageAsync(messageID);
+        
             //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Creating message information...");
             IEnumerable<DiscordButtonComponent> buttons;
             bool anyButton = false;
@@ -687,21 +766,12 @@ public static class ButtonCommand
             if (!anyButton)
                 desc = "```There are no buttons in this message.```";
             else
-                desc = $"There are {buttonCount} Buttons, these are the information (keep the information only for Admin and Mods):\n\n"
+                desc = $"There are {buttonCount} Buttons, these are the information "
+                    + $"(keep the information only for Admin and Mods):\n\n"
                     + $"{desc}";
 
             embed.Description = desc;
-            response.AddEmbed(embed);
-
-            // Send private information message.
-            await ctx.Interaction.EditOriginalResponseAsync(response);
-        }
-        catch (Exception e)
-        {
-            FurmAppClient.Instance.Logger.LogError(e, string.Empty);
-            await ctx.CreateResponseAsync(InteractionResponseType.UpdateMessage,
-                new DiscordInteractionResponseBuilder().WithContent($"[ERROR] {e.Message}"));
-        }
+        });
     }
 
     public static async Task RemoveButton(InteractionContext ctx, string messageID, string? buttonID)
@@ -743,10 +813,15 @@ public static class ButtonCommand
             // Check if user not input any button ID on this chance.
             if (string.IsNullOrEmpty(buttonID))
             {
-                await CallInteractionTimeout(ctx, "Removing Button failed, this message automatically deleted in 3 2 1...", 3000);
+                await CallInteractionTimeout(ctx,
+                    "Removing Button failed, this message automatically deleted in 3 2 1...", 3000);
                 return;
             }
         }
+        
+        // Notify progression
+        await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
+            .WithContent("Please wait for a moment to process..."));
 
         // Proceed deleting button from message
         DiscordMessageBuilder newMsg = new DiscordMessageBuilder(msg);
@@ -801,6 +876,7 @@ public static class ButtonCommand
         {
             await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
                 .WithContent("Button not found, abort the process. You cam now delete this message."));
+            return;
         }
 
         // Recreate message components
@@ -812,12 +888,161 @@ public static class ButtonCommand
                 newMsg.AddComponents(c);
         }
 
+        // Save updates to database
+        try
+        {
+            ButtonInterfaceData data = await ButtonInterfaceData.GetData(ctx.Guild.Id, ctx.Channel.Id);
+            data.DeleteButton($"{msg.Id}", targetButton.CustomId);
+            await data.SaveData();
+        }
+        catch (DBClientTimeoutException)
+        {
+            await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
+                .WithContent("```Request Time Out, please try again later!```"));
+            return;
+        }
+
         //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Modifying target message...");
         await msg.ModifyAsync(newMsg);
         //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Successfully modified message.");
 
         // Finish line.
         await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
+            .WithContent("Successfully deleted the button, you can now delete this message."));
+    }
+
+    public static async Task RemoveButton(CommandContext ctx, string messageID, string? buttonID)
+    {
+        DiscordMessage? msg = null;
+        DiscordMessage msgHandler;
+
+        // Convert string to ulong exception handle.
+        try
+        {
+            msg = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+        }
+        catch (Exception)
+        {
+            await ctx.RespondAsync(new DiscordMessageBuilder()
+                .WithContent("Bad argument inserted to message ID, insert only numbers only."));
+            return;
+        }
+
+        // Start the response.
+        msgHandler = await ctx.RespondAsync(new DiscordMessageBuilder()
+            .WithContent("Please wait for a moment..."));
+
+        // Check if the target message is not found.
+        if (msg == null)
+        {
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("The Message ID target is either Unavailable or Deleted."));
+            return;
+        }
+
+        // Check if there's no button ID input to be handled.
+        if (string.IsNullOrEmpty(buttonID))
+        {
+            buttonID = await PickButtonToBeRemove(ctx, msgHandler, msg);
+
+            // Check if user not input any button ID on this chance.
+            if (string.IsNullOrEmpty(buttonID))
+            {
+                await CallInteractionTimeout(msgHandler,
+                    "Removing Button failed, this message automatically deleted in 3 2 1...", 3000);
+                return;
+            }
+        }
+
+        // Notify progression
+        msgHandler = await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+            .WithContent("Please wait for a moment to process..."));
+
+        // Proceed deleting button from message
+        DiscordMessageBuilder newMsg = new DiscordMessageBuilder(msg);
+        DiscordButtonComponent? targetButton = null;
+        List<DiscordActionRowComponent> undeleteComponents = new();
+        DiscordActionRowComponent checkedComponent;
+        DiscordComponent[] tempComps;
+        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Deleting Button: {buttonID}");
+        foreach (var comp in msg.Components)
+        {
+            //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Checking for component: {comp.CustomId}");
+            // Already been found, skip all the checker.
+            if (targetButton != null)
+            {
+                undeleteComponents.Add(comp);
+                continue;
+            }
+
+            // Find target button.
+            targetButton = comp.Components.OfType<DiscordButtonComponent>().First((b) => b.CustomId == buttonID);
+            
+            // If the target button not found.
+            if (targetButton == null)
+            {
+                undeleteComponents.Add(comp);
+                continue;
+            }
+
+            // Else then found the target button, proceed deletion by recreating components.
+            if (comp.Components.Count - 1 == 0)
+                continue;
+
+            tempComps = new DiscordComponent[comp.Components.Count - 1];
+
+            int index = 0;
+            foreach (var c in comp.Components)
+            {
+                if (c.Type == ComponentType.Button && targetButton.CustomId == c.CustomId)
+                    continue;
+
+                tempComps[index] = c;
+                index++;
+            }
+            
+            checkedComponent = new DiscordActionRowComponent(tempComps);
+            undeleteComponents.Add(checkedComponent);
+        }
+        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Finish searching for button: {targetButton?.CustomId}");
+
+        // Check if the button has not been found.
+        if (targetButton == null)
+        {
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("Button not found, abort the process. You cam now delete this message."));
+            return;
+        }
+
+        // Recreate message components
+        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Rebuilding message...");
+        newMsg.ClearComponents();
+        foreach (var comp in undeleteComponents)
+        {
+            foreach (var c in comp.Components)
+                newMsg.AddComponents(c);
+        }
+
+        // Save updates to database
+        try
+        {
+            ButtonInterfaceData data = await ButtonInterfaceData.GetData(ctx.Guild.Id, ctx.Channel.Id);
+            data.DeleteButton($"{msg.Id}", targetButton.CustomId);
+            await data.SaveData();
+        }
+        catch (DBClientTimeoutException)
+        {
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("```Request Time Out, please try again later!```"));
+            return;
+        }
+
+        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Modifying target message...");
+        await msg.ModifyAsync(newMsg);
+        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Successfully modified message.");
+
+        // Finish line.
+        await msgHandler.ModifyAsync(new DiscordMessageBuilder()
             .WithContent("Successfully deleted the button, you can now delete this message."));
     }
 
@@ -844,11 +1069,33 @@ public static class ButtonCommand
         await buttonPick.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
         await Task.Delay(100);
 
-        // Picking process successful, proceed the other process.
-        response = new DiscordWebhookBuilder()
-            .WithContent("Please wait for a moment to process...");
+        // Return the result with custom ID of that button.
+        return buttonPick.Result.Id;
+    }
 
-        await ctx.Interaction.EditOriginalResponseAsync(response);
+    private static async Task<string> PickButtonToBeRemove(CommandContext ctx, DiscordMessage handler,
+        DiscordMessage target)
+    {
+        // Get all the button components.
+        InteractivityExtension interactivity = ctx.Client.GetInteractivity();
+        List<DiscordButtonComponent> buttons = new();
+
+        foreach (var comp in target.Components)
+            buttons.AddRange(comp.Components.OfType<DiscordButtonComponent>());
+
+        // Create awaiter to wait for user to pick the button.
+        var response = new DiscordMessageBuilder()
+            .WithContent("```Choose the button you want to delete.```")
+            .AddComponents(buttons);
+        
+        var afterResponse = await handler.ModifyAsync(response);
+        var buttonPick = await afterResponse.WaitForButtonAsync(ctx.User, TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
+
+        // Timeout response if user didn't pick any button style
+        if (buttonPick.TimedOut) return string.Empty;
+
+        await buttonPick.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+        await Task.Delay(100);
 
         // Return the result with custom ID of that button.
         return buttonPick.Result.Id;

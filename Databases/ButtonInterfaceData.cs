@@ -36,17 +36,9 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
         }
     }
 
-    public ulong GuildID
-    {
-        get => _guildID;
-        set => _guildID = value;
-    }
+    public ulong GuildID => _guildID;
 
-    public ulong ChannelID
-    {
-        get => _channelID;
-        set => _channelID = value;
-    }
+    public ulong ChannelID => _channelID;
 
     #endregion
 
@@ -65,17 +57,17 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
 
     #region ILoadDatabase
 
+    /// <exception cref="DBClientTimeoutException">
+    /// When database client connection timeout happens.
+    /// </exception>
     public async Task<bool> LoadData()
     {
-        MongoClient client = await DatabaseRef.GetClient();
-        var filter = Builders<BsonDocument>.Filter.Eq("channelID", $"{_channelID}");
-
         await DatabaseRef.HandleDBProcess(async () => {
             // Initialize database and collection.
-            var database = client.GetDatabase(DB_CONSTANT.INTERFACE_DATABASE_NAME);
-            var collection = database.GetCollection<BsonDocument>($"{_guildID}");
+            var collection = await DatabaseRef.InitCollection(_guildID, DB_CONSTANT.INTERFACE_DATABASE_NAME);
 
             // Get the data result.
+            var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.CHANNEL_ID_KEY, $"{_channelID}");
             var result = await collection.Find(filter).ToListAsync();
 
             // Check if data not found.
@@ -99,36 +91,33 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
 
     #region ISaveDatabase
 
+    /// <exception cref="DBClientTimeoutException">
+    /// When database client connection timeout happens.
+    /// </exception>
     public async Task<bool> SaveData()
     {
-        MongoClient client = await DatabaseRef.GetClient();
         var buttonsDoc = new BsonDocument(_messageButtonForm);
-        var filter = Builders<BsonDocument>.Filter.Eq("channelID", $"{_channelID}");
 
         await DatabaseRef.HandleDBProcess(async () => {
-            var database = client.GetDatabase(DB_CONSTANT.INTERFACE_DATABASE_NAME);
-
             // Check if the collection exists
-            if (!(await DatabaseRef.IsGuildRegistered(_guildID)))
-                await DatabaseRef.AddNewGuildCollection(_guildID);
+            var collection = await DatabaseRef.InitCollection(_guildID, DB_CONSTANT.INTERFACE_DATABASE_NAME);
 
-            var collection = database.GetCollection<BsonDocument>($"{_guildID}");
-
-            //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Searching if the channel exists...");
+            // Get the data result.
+            var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.CHANNEL_ID_KEY, $"{_channelID}");
             var channelDocumentFound = await collection.Find(filter).ToListAsync();
 
             if (channelDocumentFound.Count == 0)
             {
                 //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Channel not found, inserting data...");
                 await collection.InsertOneAsync(new BsonDocument {
-                    { "channelID", $"{_channelID}" },
-                    { "messageID", new BsonDocument() },
+                    { DB_CONSTANT.CHANNEL_ID_KEY, $"{_channelID}" },
+                    { DB_CONSTANT.MESSAGE_ID_KEY, new BsonDocument() },
                 });
                 //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] New channel document has been inserted!");
             }
 
             //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Updating data...");
-            await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set($"messageID", buttonsDoc));
+            await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set(DB_CONSTANT.MESSAGE_ID_KEY, buttonsDoc));
         });
 
         return true;
@@ -150,7 +139,7 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
     public void AddButton(string messageID, string buttonID)
     {
         if (!_messageButtonForm.ContainsKey(messageID))
-            _messageButtonForm[messageID] = new Dictionary<string, string>();
+            _messageButtonForm[messageID] = new();
 
         _messageButtonForm[messageID][buttonID] = string.Empty;
     }

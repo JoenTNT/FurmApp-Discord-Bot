@@ -11,10 +11,12 @@ namespace FurmAppDBot.Commands
     public class SlashCommandFunctions : ApplicationCommandModule
     {
         [SlashCommand(CMD_CONSTANT.PING_COMMAND_NAME, CMD_CONSTANT.PING_COMMAND_DESCRIPTION)]
-        public async Task Ping(InteractionContext ctx) => await PingCommand.Ping(ctx);
+        public async Task Ping(InteractionContext ctx)
+            => await PingCommand.Ping(ctx);
 
         [SlashCommand(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME, CMD_CONSTANT.GET_PREFIX_COMMAND_DESCRIPTION)]
-        public async Task GetPrefix(InteractionContext ctx) => await PrefixCommand.GetPrefix(ctx);
+        public async Task GetPrefix(InteractionContext ctx)
+            => await PrefixCommand.GetPrefix(ctx);
 
         [SlashCommand(CMD_CONSTANT.EMBED_COMMAND_NAME, CMD_CONSTANT.EMBED_COMMAND_DESCRIPTION)]
         public async Task Embed(InteractionContext ctx,
@@ -39,28 +41,32 @@ namespace FurmAppDBot.Commands
             [Option("Title", "Set title of embed.")]
             string? title = null,
             [Option("TitleURL", "Set title hyper link of embed.")]
-            string? titleUrl = null) => await EmbedCommand.Embed(ctx, authorIconUrl, authorName, authorHyperLink, embedColor,
+            string? titleUrl = null)
+            => await EmbedCommand.Embed(ctx, authorIconUrl, authorName, authorHyperLink, embedColor,
                 embedDesc, footerIconUrl, footerText, imageUrl, thumbnailUrl, title, titleUrl);
         
         [SlashCommand(CMD_CONSTANT.PURGE_COMMAND_NAME, CMD_CONSTANT.PURGE_COMMAND_DESCRIPTION)]
         [SlashCommandPermissions(Permissions.ManageGuild)]
         public async Task Purge(InteractionContext ctx,
             [Option("Amount", "How many messages will be deleted before calling this command. For example: 10", true)]
-            string purgeAmount) => await PurgeCommand.Purge(ctx, purgeAmount);
+            string purgeAmount)
+            => await PurgeCommand.Purge(ctx, purgeAmount);
 
         [SlashCommand(CMD_CONSTANT.SET_BUTTON_COMMAND_NAME, CMD_CONSTANT.SET_BUTTON_COMMAND_DESCRIPTION)]
         [SlashCommandPermissions(Permissions.ManageGuild)]
         public async Task SetButton(InteractionContext ctx,
             [Option("MessageID", "Target message ID, For Example: 1234567890123456789", autocomplete: true)]
             [ChoiceProvider(typeof(MessageIDChoiceProvider))]
-            string messageID) => await ButtonCommand.SetButton(ctx, messageID);
+            string messageID)
+            => await ButtonCommand.SetButton(ctx, messageID);
 
         [SlashCommand(CMD_CONSTANT.GET_BUTTON_COMMAND_NAME, CMD_CONSTANT.GET_BUTTON_COMMAND_DESCRIPTION)]
         [SlashCommandPermissions(Permissions.ManageGuild)]
         public async Task GetButton(InteractionContext ctx,
             [Option("MessageID", "Target message ID, For Example: 1234567890123456789", autocomplete: true)]
             [ChoiceProvider(typeof(MessageIDChoiceProvider))]
-            string messageID) => await ButtonCommand.GetButton(ctx, messageID);
+            string messageID)
+            => await ButtonCommand.GetButton(ctx, messageID);
 
         [SlashCommand(CMD_CONSTANT.REMOVE_BUTTON_COMMAND_NAME, CMD_CONSTANT.REMOVE_BUTTON_COMMAND_DESCRIPTION)]
         [SlashCommandPermissions(Permissions.ManageGuild)]
@@ -69,20 +75,27 @@ namespace FurmAppDBot.Commands
             [ChoiceProvider(typeof(MessageIDChoiceProvider))]
             string messageID,
             [Option("ButtonID", "Target button ID", autocomplete: false)]
-            string? buttonID = null) => await ButtonCommand.RemoveButton(ctx, messageID, buttonID);
+            string? buttonID = null)
+            => await ButtonCommand.RemoveButton(ctx, messageID, buttonID);
 
         [SlashCommand(CMD_CONSTANT.HELP_COMMAND_NAME, CMD_CONSTANT.HELP_COMMAND_DESCRIPTION)]
-        public async Task Help(InteractionContext ctx) => await HelpCommand.Help(ctx);
+        public async Task Help(InteractionContext ctx,
+            [Option("CommandName", "Name the command if you need a specific help.", autocomplete: false)]
+            [ChoiceProvider(typeof(CommandNameChoiceProvider))]
+            string? commandName = null)
+            => await HelpCommand.Help(ctx, commandName);
 
         [SlashCommand(CMD_CONSTANT.ADD_FORM_COMMAND_NAME, CMD_CONSTANT.ADD_FORM_COMMAND_DESCRIPTION)]
         [SlashCommandPermissions(Permissions.ManageGuild)]
         public async Task AddForm(InteractionContext ctx,
             [Option("FormID", "New form by ID.", autocomplete: true)]
-            string formID) => await FormCommand.AddForm(ctx, formID);
+            string formID)
+            => await FormCommand.AddForm(ctx, formID);
 
         [SlashCommand(CMD_CONSTANT.GET_ALL_FORM_COMMAND_NAME, CMD_CONSTANT.GET_ALL_FORM_COMMAND_DESCRIPTION)]
         [SlashCommandPermissions(Permissions.ManageGuild)]
-        public async Task GetAllForm(InteractionContext ctx) => await FormCommand.GetAllForm(ctx);
+        public async Task GetAllForm(InteractionContext ctx)
+            => await FormCommand.GetAllForm(ctx);
 
         // // TEMPORARY: For testing modal form feature in Discord.
         // [SlashCommand("samplemodal", "For testing a sample modal")]

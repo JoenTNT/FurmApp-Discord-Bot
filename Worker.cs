@@ -9,6 +9,7 @@ using DSharpPlus.SlashCommands;
 using FurmAppDBot.Clients;
 using FurmAppDBot.Commands;
 using FurmAppDBot.Databases;
+using FurmAppDBot.Databases.Exceptions;
 
 namespace FurmAppDBot;
 
@@ -95,7 +96,14 @@ public class Worker : BackgroundService
 
         // Initialize singletons
         FurmAppClient.Init(_client, _logger, _config);
-        await MainDatabase.Init(_logger, _config);
+        try
+        {
+            await MainDatabase.Init(_logger, _config);
+        }
+        catch (DBClientTimeoutException)
+        {
+            _logger.LogInformation("[DEBUG] Failed to connect to the database, try again later!");
+        }
 
         // Connect the bot while looping the update status.
         Task statusUpdate = StatusElapse(_client, CONSTANT.STATUS_ELAPSE_TIME_MILISECONDS, _cancelUpdateStatus.Token);
@@ -182,13 +190,17 @@ public class Worker : BackgroundService
 
     private async Task ClientGuildCreatedCallback(DiscordClient client, GuildCreateEventArgs args)
     {
-        await MainDatabase.Instance.AddNewGuildCollection(args.Guild.Id);
+        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.INTERFACE_DATABASE_NAME);
+        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.FORM_DATABASE_NAME);
+        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.SUBMISSION_DATABASE_NAME);
+        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.BACKUP_DATABASE_NAME);
+        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.CONFIG_DATABASE_NAME);
         await args.Guild.GetDefaultChannel().SendMessageAsync("Hello There!");
     }
 
     private async Task ClientGuildDeletedCallback(DiscordClient client, GuildDeleteEventArgs args)
     {
-        
+        await Task.CompletedTask;
     }
 
     // private async Task ClientInteractionCreatedCallback(DiscordClient client, InteractionCreateEventArgs args)
@@ -212,6 +224,8 @@ public class Worker : BackgroundService
 
             // await Task.CompletedTask;
         }
+
+        await Task.CompletedTask;
     }
 
     #endregion
