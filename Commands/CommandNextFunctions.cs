@@ -3,6 +3,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using FurmAppDBot.Clients;
+using FurmAppDBot.Commands.Attributes;
 using FurmAppDBot.Databases;
 
 namespace FurmAppDBot.Commands;
@@ -21,51 +22,19 @@ public class CommandNextFunctions : BaseCommandModule
     public async Task Purge(CommandContext ctx, string purgeAmount)
         => await PurgeCommand.Purge(ctx, purgeAmount);
 
-    [Command(CMD_CONSTANT.SET_BUTTON_COMMAND_NAME)]
-    [RequirePermissions(Permissions.ManageGuild)]
-    public async Task SetButton(CommandContext ctx, string messageID)
-        => await ButtonCommand.SetButton(ctx, messageID);
-
-    [Command(CMD_CONSTANT.SET_BUTTON_COMMAND_NAME)]
-    [RequirePermissions(Permissions.ManageGuild)]
-    public async Task GetButton(CommandContext ctx, string messageID)
-        => await ButtonCommand.GetButton(ctx, messageID);
-
-    [Command(CMD_CONSTANT.REMOVE_BUTTON_COMMAND_NAME)]
-    [RequirePermissions(Permissions.ManageGuild)]
-    public async Task RemoveButton(CommandContext ctx, string messageID, string? buttonID = null)
-        => await ButtonCommand.RemoveButton(ctx, messageID, buttonID);
-
-    [Command(CMD_CONSTANT.ADD_FORM_COMMAND_NAME)]
-    [RequirePermissions(Permissions.ManageGuild)]
-    public async Task AddForm(CommandContext ctx, string formID)
-        => await FormCommand.AddForm(ctx, formID);
-
-    [Command(CMD_CONSTANT.HELP_COMMAND_NAME)]
-    public async Task Help(CommandContext ctx, string commandName)
-        => await HelpCommand.Help(ctx, commandName);
-
-    [Command("syncdb")]
+    [Command(CMD_CONSTANT.SYNCDB_COMMAND_NAME)]
     [DeveloperOnly]
     public async Task SyncDB(CommandContext ctx)
     {
+        // Clearing unused data from database.
         var db = MainDatabase.Instance;
         await ctx.Message.DeleteAsync();
-
-        var messageResponse = new DiscordMessageBuilder()
-            .WithContent("Please wait for a moment...");
-
-        var processInfoMessage = await ctx.Channel.SendMessageAsync(messageResponse);
-
+        var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
         foreach (var guild in ctx.Client.Guilds)
         {
             FurmAppClient.Instance.Logger.LogInformation($"Cleaning up server (ID: {guild.Key})");
             await db.DeleteAllUnusedMissingMessage(guild.Value);
         }
-
-        messageResponse = new DiscordMessageBuilder()
-            .WithContent("All Done!");
-        
-        await processInfoMessage.ModifyAsync(messageResponse);
+        await msgHandler.ModifyAsync("All Done!");
     }
 }

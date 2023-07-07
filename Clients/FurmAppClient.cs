@@ -1,3 +1,7 @@
+#pragma warning disable CS8602
+#pragma warning disable CS8603
+#pragma warning disable CS8604
+
 using DSharpPlus;
 
 namespace FurmAppDBot.Clients;
@@ -20,11 +24,11 @@ public class FurmAppClient
 
     #region Variables
 
-    private static FurmAppClient s_instance = null;
+    private static FurmAppClient? s_instance = null;
 
-    private DiscordClient _client = null;
-    private ILogger<Worker> _logger = null;
-    private IConfiguration _config = null;
+    private DiscordClient? _client = null;
+    private ILogger<Worker>? _logger = null;
+    private IConfiguration? _config = null;
 
     #endregion
 

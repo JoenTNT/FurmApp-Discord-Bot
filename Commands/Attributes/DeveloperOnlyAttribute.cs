@@ -1,7 +1,7 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 
-namespace FurmAppDBot.Commands;
+namespace FurmAppDBot.Commands.Attributes;
 
 public class DeveloperOnlyAttribute : CheckBaseAttribute
 {

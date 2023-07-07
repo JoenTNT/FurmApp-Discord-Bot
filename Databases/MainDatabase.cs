@@ -1,3 +1,7 @@
+#pragma warning disable CS8602
+#pragma warning disable CS8603
+#pragma warning disable CS8604
+
 using MongoDB.Driver;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
@@ -14,7 +18,7 @@ public class MainDatabase
 
     private const int LIMIT_TRIES = 10;
 
-    private static MainDatabase s_instance;
+    private static MainDatabase? s_instance;
 
     //private const string CONNECTION_URL = "mongodb+srv://<username>:<password>@cluster0.gefnhnd.mongodb.net/?retryWrites=true&w=majority";
     private const string CONNECTION_URL = "mongodb://localhost:27017";
@@ -23,7 +27,7 @@ public class MainDatabase
     private IConfiguration? _config = null;
 
     private MongoClientSettings? _settings = null;
-    private MongoClient? _client = null;
+    private MongoClient? _client;
     private string _url = string.Empty;
 
     #endregion
@@ -275,23 +279,38 @@ public class MainDatabase
         } while (!IsConnected && tries > 0);
     }
 
-    // private async Task TestMethod()
-    // {
-    //     try
-    //     {
-    //         var db = _client.GetDatabase("runtime");
-    //         var col = db.GetCollection<BsonDocument>("guild_data");
+    /// <summary>
+    /// Used to handle database process.
+    /// </summary>
+    /// <param name="func">Must contains database process.</param>
+    /// <exception cref="DBClientTimeoutException">
+    /// When database client connection timeout happens.
+    /// </exception>
+    public async Task<T?> HandleDBProcess<T>(Func<Task<T>> func)
+    {
+        var tries = LIMIT_TRIES;
+        
+        do {
+            try
+            {
+                // Handle database process.
+                return await func();
+            }
+            catch (MongoConnectionException)
+            {
+                _logger?.LogError($"[ERROR] Connection failure, attempting to reconnect...");
+                _client = await AttemptReconnect();
+                tries--;
+            }
+            catch (TimeoutException)
+            {
+                _logger?.LogError($"[ERROR] Connection Timeout! Try again in few moments.");
+                throw new DBClientTimeoutException();
+            }
+        } while (!IsConnected && tries > 0);
 
-    //         await col.InsertOneAsync(new BsonDocument { { "Testing", 12345 } });
-                
-    //         _logger.LogInformation("Ping the database successful!");
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         // Handle exception
-    //         _logger.LogInformation(ex, string.Empty);
-    //     }
-    // }
+        return default(T);
+    }
 
     #endregion
 }

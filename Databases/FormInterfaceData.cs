@@ -29,8 +29,6 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
 
     #region Variables
 
-    private static readonly HashSet<FormInterfaceData> s_cacheData = new();
-
     private List<QuestionProperties> _questions = new();
 
     private ulong _guildID = 0;
@@ -153,6 +151,22 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
 
     #region Main
 
+    public async override Task ConnectElement(DataElementBase with, params string[] keys)
+    {
+        if (with is ButtonInterfaceData)
+        {
+            // Convert to form interface data
+            var btnData = (ButtonInterfaceData)with;
+
+            // First index is the message ID, second index is the button ID.
+            btnData.SetFormID(keys[0], keys[1], _formID);
+            await btnData.SaveData();
+            return;
+        }
+
+        throw new ConnectElementFailedException();
+    }
+
     /// <summary>
     /// Add a question to form.
     /// Must run Save method to make sure it's saved to database.
@@ -189,34 +203,25 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     public static async Task<bool> Exists(ulong guildID, string formID)
     {
         // Search via cache.
-        //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Searching...");
-        if (!s_cacheData.Any((i) => i.GuildID == guildID && i.FormID == formID))
-        {
-            var db = MainDatabase.Instance;
-            var result = false;
+        var db = MainDatabase.Instance;
+        var result = false;
 
-            await db.HandleDBProcess(async () => {
-                // Init collection.
-                var collection = await db.InitCollection(guildID, DB_CONSTANT.FORM_DATABASE_NAME);
+        await db.HandleDBProcess(async () => {
+            // Init collection.
+            var collection = await db.InitCollection(guildID, DB_CONSTANT.FORM_DATABASE_NAME);
 
-                // Find data from database collection using filter.
-                //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Finding data from collection with filter...");
-                var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, formID);
-                var formFound = await collection.Find(filter).ToListAsync();
+            // Find data from database collection using filter.
+            var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, formID);
+            var formFound = await collection.Find(filter).ToListAsync();
 
-                // Check if not found, then it is valid
-                if (formFound.Count == 0) return;
+            // Check if not found, then it is valid.
+            if (formFound.Count == 0) return;
 
-                // If found, then add it to cache
-                //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Not exists, proceed data creation...");
-                result = true;
-                await GetData(guildID, formID);
-            });
+            // Set result value.
+            result = true;
+        });
 
-            return result;
-        }
-
-        return true;
+        return result;
     }
 
     /// <exception cref="DBClientTimeoutException">
@@ -224,19 +229,9 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     /// </exception>
     public static async Task<FormInterfaceData> GetData(ulong guildID, string formID)
     {
-        FormInterfaceData data;
-        Func<FormInterfaceData, bool> q = (i) => i.GuildID == guildID && i.FormID == formID;
-
-        // Check if there's any cache information.
-        if (!s_cacheData.Any(q))
-        {
-            data = new FormInterfaceData(MainDatabase.Instance, guildID, formID);
-            s_cacheData.Add(data);
-            await data.LoadData();
-            return data;
-        }
-
-        data = s_cacheData.First(q);
+        // Immediately load data from database
+        FormInterfaceData data = new FormInterfaceData(MainDatabase.Instance, guildID, formID);
+        await data.LoadData();
         return data;
     }
 
@@ -247,8 +242,6 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     {
         await Task.CompletedTask;
     }
-
-    public static void ClearCache() => s_cacheData.Clear();
 
     #endregion
 }

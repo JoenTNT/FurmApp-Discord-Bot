@@ -88,11 +88,21 @@ public class Worker : BackgroundService
 
         _commandExtension = _client.UseCommandsNext(_commandExtensionConfig);
         _commandExtension.RegisterCommands<CommandNextFunctions>();
+        _commandExtension.RegisterCommands<HelpCommandsModule>();
+        _commandExtension.RegisterCommands<ButtonCommandsModule>();
+        _commandExtension.RegisterCommands<ConnectCommandsModule>();
+        _commandExtension.RegisterCommands<EmbedCommandsModule>();
+        _commandExtension.RegisterCommands<FormCommandsModule>();
 
         _slashExtensionConfig = new SlashCommandsConfiguration();
 
         _slashExtension = _client.UseSlashCommands(_slashExtensionConfig);
         _slashExtension.RegisterCommands<SlashCommandFunctions>();
+        _slashExtension.RegisterCommands<HelpSlashCommandGroup>();
+        _slashExtension.RegisterCommands<ButtonSlashCommandGroup>();
+        _slashExtension.RegisterCommands<ConnectSlashCommandGroup>();
+        _slashExtension.RegisterCommands<EmbedSlashCommandGroup>();
+        _slashExtension.RegisterCommands<FormSlashCommandGroup>();
 
         // Initialize singletons
         FurmAppClient.Init(_client, _logger, _config);
@@ -118,7 +128,6 @@ public class Worker : BackgroundService
 
         _cancelUpdateStatus.Cancel();
         await _client.DisconnectAsync();
-        ButtonInterfaceData.ClearCache();
         _client.Dispose();
 
         _logger.LogInformation("[DEBUG] The Bot has been stopped.");
@@ -126,8 +135,8 @@ public class Worker : BackgroundService
 
     private async Task StatusElapse(DiscordClient client, int everyMiliseconds, CancellationToken cancelToken)
     {
-        DiscordActivity GetBotPrefix() => new DiscordActivity($"My Prefis is {CONSTANT.DEFAULT_PREFIX}");
-        DiscordActivity GetServerCount() => new DiscordActivity($"Watching {client.Guilds.Count}");
+        DiscordActivity GetBotPrefix() => new DiscordActivity($"My Prefix: {CONSTANT.DEFAULT_PREFIX}", ActivityType.ListeningTo);
+        DiscordActivity GetServerCount() => new DiscordActivity($"{client.Guilds.Count} Servers", ActivityType.Watching);
 
         try
         {

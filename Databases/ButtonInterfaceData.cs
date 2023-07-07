@@ -13,8 +13,6 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
 {
     #region Variables
 
-    private static HashSet<ButtonInterfaceData> s_cacheData = new();
-
     private ulong _guildID = 0;
     private ulong _channelID = 0;
     private Dictionary<string, Dictionary<string, string>> _messageButtonForm = new();
@@ -22,8 +20,6 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
     #endregion
 
     #region Properties
-
-    public static HashSet<ButtonInterfaceData> CacheData => s_cacheData;
 
     public IReadOnlyDictionary<string, string>? this[string messageID]
     {
@@ -106,17 +102,25 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
             var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.CHANNEL_ID_KEY, $"{_channelID}");
             var channelDocumentFound = await collection.Find(filter).ToListAsync();
 
+            // Check if the data is empty.
+            if (_messageButtonForm.Count == 0 && channelDocumentFound.Count > 0)
+            {
+                // Delete document from collection.
+                await collection.DeleteOneAsync(filter);
+                return;
+            }
+
+            // Check if there's no document in collection.
             if (channelDocumentFound.Count == 0)
             {
-                //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Channel not found, inserting data...");
+                // Add new one button interface data
                 await collection.InsertOneAsync(new BsonDocument {
                     { DB_CONSTANT.CHANNEL_ID_KEY, $"{_channelID}" },
                     { DB_CONSTANT.MESSAGE_ID_KEY, new BsonDocument() },
                 });
-                //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] New channel document has been inserted!");
             }
 
-            //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Updating data...");
+            // Update interface data to database.
             await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set(DB_CONSTANT.MESSAGE_ID_KEY, buttonsDoc));
         });
 
@@ -127,6 +131,22 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
 
     #region Main
 
+    public async override Task ConnectElement(DataElementBase with, params string[] keys)
+    {
+        if (with is FormInterfaceData)
+        {
+            // Convert to form interface data
+            var formData = (FormInterfaceData)with;
+
+            // First index is the message ID, second index is the button ID.
+            this.SetFormID(keys[0], keys[1], formData.FormID);
+            await this.SaveData();
+            return;
+        }
+
+        throw new ConnectElementFailedException();
+    }
+
     public bool ContainsMessage(string messageID) => _messageButtonForm.ContainsKey(messageID);
 
     public bool ContainsButtonInMessage(string messageID, string buttonID)
@@ -134,6 +154,18 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
         if (!ContainsMessage(messageID)) return false;
 
         return _messageButtonForm[messageID].ContainsKey(buttonID);
+    }
+
+    public string? GetFormID(string messageID, string buttonID)
+    {
+        if (!ContainsButtonInMessage(messageID, buttonID)) return null;
+
+        return _messageButtonForm[messageID][buttonID];
+    }
+
+    internal void SetFormID(string messageID, string buttonID, string formID)
+    {
+        _messageButtonForm[messageID][buttonID] = formID;
     }
 
     public void AddButton(string messageID, string buttonID)
@@ -169,23 +201,11 @@ public sealed class ButtonInterfaceData : DataElementBase, ILoadDatabase, ISaveD
     /// </exceptiion>
     public static async Task<ButtonInterfaceData> GetData(ulong guildID, ulong channelID)
     {
-        ButtonInterfaceData data;
-        Func<ButtonInterfaceData, bool> q = (i) => i.GuildID == guildID && i.ChannelID == channelID;
-
-        // Check if there's any cache information.
-        if (!s_cacheData.Any(q))
-        {
-            data = new ButtonInterfaceData(MainDatabase.Instance, guildID, channelID);
-            s_cacheData.Add(data);
-            await data.LoadData();
-            return data;
-        }
-
-        data = s_cacheData.First(q);
+        // Immediately load data from database.
+        ButtonInterfaceData data = new ButtonInterfaceData(MainDatabase.Instance, guildID, channelID);
+        await data.LoadData();
         return data;
     }
-
-    public static void ClearCache() => s_cacheData.Clear();
 
     #endregion
 }
