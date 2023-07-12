@@ -16,7 +16,7 @@ public class ButtonSlashCommandGroup : ApplicationCommandModule
     [SlashCommand(CMD_CONSTANT.ADD_COMMAND_NAME, CMD_CONSTANT.BUTTON_ADD_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task SetButton(InteractionContext ctx,
-        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION, autocomplete: true)]
+        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION)]
         [ChoiceProvider(typeof(MessageIDChoiceProvider))]
         string messageID)
     {
@@ -86,7 +86,7 @@ public class ButtonSlashCommandGroup : ApplicationCommandModule
     [SlashCommand(CMD_CONSTANT.GET_COMMAND_NAME, CMD_CONSTANT.BUTTON_GET_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task GetButton(InteractionContext ctx,
-        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION, autocomplete: true)]
+        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION)]
         [ChoiceProvider(typeof(MessageIDChoiceProvider))]
         string messageID)
     {
@@ -148,10 +148,10 @@ public class ButtonSlashCommandGroup : ApplicationCommandModule
     [SlashCommand(CMD_CONSTANT.DELETE_COMMAND_NAME, CMD_CONSTANT.BUTTON_DELETE_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task RemoveButton(InteractionContext ctx,
-        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION, autocomplete: true)]
+        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION)]
         [ChoiceProvider(typeof(MessageIDChoiceProvider))]
         string messageID,
-        [Option(CMD_CONSTANT.BUTTON_ID_PARAMETER, CMD_CONSTANT.BUTTON_ID_PARAMETER_DESCRIPTION, autocomplete: false)]
+        [Option(CMD_CONSTANT.BUTTON_ID_PARAMETER, CMD_CONSTANT.BUTTON_ID_PARAMETER_DESCRIPTION)]
         string? buttonID = null)
     {
         // Initial respond with message handler.

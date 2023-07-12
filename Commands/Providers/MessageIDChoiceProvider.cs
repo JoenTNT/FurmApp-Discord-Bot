@@ -7,7 +7,7 @@ namespace FurmAppDBot.Commands.Providers;
 
 public class MessageIDChoiceProvider : ChoiceProvider
 {
-    #region IChoiceProvider
+    #region ChoiceProvider
 
     public override Task<IEnumerable<DiscordApplicationCommandOptionChoice>> Provider()
     {
@@ -19,6 +19,8 @@ public class MessageIDChoiceProvider : ChoiceProvider
 
     #region Main
 
+    // TODO: Get message ID from database by guild and channel.
+    // ISSUE: Cannot receive guild information.
     private async Task<IEnumerable<DiscordApplicationCommandOptionChoice>> GetOptionChoicesFromDB()
     {
         List<DiscordApplicationCommandOptionChoice> choices = new();

@@ -14,7 +14,7 @@ public class EmbedSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.EMBED_AUTHOR_NAME_PARAMETER, "Set author name in embed.")]
         string? authorName = null,
         [Option(CMD_CONSTANT.EMBED_COLOR_PARAMETER, "Set embed color, default is 'white' or 'FFFFFF'.")]
-        string? embedColor = CMD_CONSTANT.EMBED_COLOR_PARAMETER,
+        string? embedColor = null,
         [Option(CMD_CONSTANT.EMBED_DESCRIPTION_PARAMETER, "Embed main description under the title.")]
         string? embedDesc = null,
         [Option(CMD_CONSTANT.EMBED_FOOTER_ICON_URL_PARAMETER, "Set icon of footer part in embed.")]
@@ -30,15 +30,15 @@ public class EmbedSlashCommandGroup : ApplicationCommandModule
     {
         // Delete interaction by default.
         await ctx.DeferAsync();
-        await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
+        var rmHandler = await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
             .WithContent("Please wait for a moment..."));
 
         // Create embed.
         await EmbedCommandsModule.Create(ctx.Channel, authorIconUrl, authorName, embedColor,
             embedDesc, footerIconUrl, footerText, imageUrl, thumbnailUrl, title);
-        //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Embed created!");
 
-        await ctx.DeleteResponseAsync();
+        // Delete message handler.
+        await rmHandler.DeleteAsync();
     }
     
     [SlashCommand(CMD_CONSTANT.EDIT_COMMAND_NAME, CMD_CONSTANT.EMBED_EDIT_DESCRIPTION)]

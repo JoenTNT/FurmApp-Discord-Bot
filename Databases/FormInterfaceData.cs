@@ -3,6 +3,8 @@ using DSharpPlus.Entities;
 using FurmAppDBot.Clients;
 using FurmAppDBot.Databases.Exceptions;
 using MongoDB.Bson;
+using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace FurmAppDBot.Databases;
@@ -21,6 +23,8 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
         public TextInputStyle style;
         public string placeholder;
         public bool required;
+        public int minLength;
+        public int maxLength;
 
         #endregion
     }
@@ -48,6 +52,8 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
         Style = _questions[questionNumber].style,
         Placeholder = _questions[questionNumber].placeholder,
         Required = _questions[questionNumber].required,
+        MinimumLength = _questions[questionNumber].minLength,
+        MaximumLength = _questions[questionNumber].maxLength,
     };
 
     public ulong GuildID => _guildID;
@@ -95,17 +101,17 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
             _questions.Clear();
 
             // Receive all data
-            var arrayDoc = documentFound[0][DB_CONSTANT.FORM_QUESTIONS_KEY].AsBsonArray;
-            QuestionProperties temp;
-            foreach (var d in arrayDoc)
+            var array = documentFound[0][DB_CONSTANT.FORM_QUESTIONS_KEY].AsBsonArray;
+            foreach (var q in array)
             {
-                // Receive element info
-                temp = new QuestionProperties {
-                    
-                };
-
-                // Check if element already exists
-                // Add to list
+                _questions.Add(new QuestionProperties {
+                    question = q["question"].AsString,
+                    style = (TextInputStyle)q["style"].AsInt32,
+                    placeholder = q["placeholder"].AsString,
+                    required = q["required"].AsBoolean,
+                    minLength = q["minLength"].AsInt32,
+                    maxLength = q["maxLength"].AsInt32,
+                });
             }
         });
 
@@ -132,15 +138,13 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
             // Check unique data which don't exists in database.
             if (documentFound.Count == 0)
             {
-                //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Channel not found, inserting data...");
                 await collection.InsertOneAsync(new BsonDocument {
                     { DB_CONSTANT.FORM_ID_KEY, $"{_formID}" },
                     { DB_CONSTANT.FORM_QUESTIONS_KEY, new BsonArray() },
                 });
-                //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] New channel document has been inserted!");
             }
 
-            //FurmAppClient.Instance.Logger.LogInformation($"[DEBUG] Updating data...");
+            // Update questions data.
             await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set(DB_CONSTANT.FORM_QUESTIONS_KEY, _questions));
         });
 
@@ -175,7 +179,9 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     /// <param name="style">Input style, is it short or paragraph</param>
     /// <param name="placeholder">Give an answer suggestion</param>
     /// <param name="required">Is this question must be filled by the user</param>
-    public void AddQuestion(string question, TextInputStyle style, string placeholder, bool required)
+    /// <param name="minLength">User minimal input length</param>
+    /// <param name="maxLength">User maximal input length</param>
+    public void AddQuestion(string question, TextInputStyle style, string placeholder, bool required, int minLength, int maxLength)
     {
         // Making sure the question ID is unique.
         _questions.Add(new QuestionProperties {
@@ -183,6 +189,8 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
             question = question,
             required = required,
             style = style,
+            minLength = minLength,
+            maxLength = maxLength,
         });
     }
 

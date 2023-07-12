@@ -2,6 +2,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using FurmAppDBot.Clients;
+using FurmAppDBot.Utilities;
 
 namespace FurmAppDBot.Commands;
 
@@ -10,17 +11,15 @@ public class EmbedCommandsModule : BaseCommandModule
     #region Main
 
     [Command(CMD_CONSTANT.EMBED_COMMAND_NAME)]
-    public async Task Embed(CommandContext ctx, string subCommand, params string[] inputs)
+    public async Task Embed(CommandContext ctx, string commandName, params string[] inputs)
     {
         (string?[], bool) ps;
-        switch (subCommand.ToLower())
+        switch (commandName.ToLower())
         {
             case CMD_CONSTANT.CREATE_COMMAND_NAME:
-                //FurmAppClient.Instance.Logger.LogInformation($"Sub Command: {subCommand};");
-                //FurmAppClient.Instance.Logger.LogInformation($"Parameter Input Count: {inputs.Count()};");
-                //foreach (var i in inputs) FurmAppClient.Instance.Logger.LogInformation($"{i}");
                 try
                 {
+                    // Define all input properties.
                     CreateDefinition(inputs, out ps.Item1, out ps.Item2);
                 }
                 catch (Exception ex)
@@ -29,8 +28,6 @@ public class EmbedCommandsModule : BaseCommandModule
                     await ctx.Channel.SendMessageAsync("```Bad input argument, abort process.```");
                     return;
                 }
-                //await ctx.Message.DeleteAsync();
-                //foreach (var i in ps.Item1) FurmAppClient.Instance.Logger.LogInformation($"{i}");
                 
                 // Check if there's no defined element.
                 if (!ps.Item2)
@@ -68,7 +65,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p0 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_AUTHOR_ICON_URL_PARAMETER));
         if (p0 != null)
         {
-            result[0] = GetValueAtFirstEqual(p0);
+            result[0] = SimpleUtility.GetValueAtFirstEqual(p0);
             if (!string.IsNullOrEmpty(result[0])) foundAny = true;
         }
 
@@ -76,7 +73,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p1 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_AUTHOR_NAME_PARAMETER));
         if (p1 != null)
         {
-            result[1] = GetValueAtFirstEqual(p1);
+            result[1] = SimpleUtility.GetValueAtFirstEqual(p1);
             if (!string.IsNullOrEmpty(result[1])) foundAny = true;
         }
 
@@ -84,7 +81,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p2 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_COLOR_PARAMETER));
         if (p2 != null)
         {
-            result[2] = GetValueAtFirstEqual(p2);
+            result[2] = SimpleUtility.GetValueAtFirstEqual(p2);
             if (!string.IsNullOrEmpty(result[2])) foundAny = true;
         }
 
@@ -92,7 +89,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p3 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_DESCRIPTION_PARAMETER));
         if (p3 != null)
         {
-            result[3] = GetValueAtFirstEqual(p3);
+            result[3] = SimpleUtility.GetValueAtFirstEqual(p3);
             if (!string.IsNullOrEmpty(result[3])) foundAny = true;
         }
 
@@ -100,7 +97,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p4 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_FOOTER_ICON_URL_PARAMETER));
         if (p4 != null)
         {
-            result[4] = GetValueAtFirstEqual(p4);
+            result[4] = SimpleUtility.GetValueAtFirstEqual(p4);
             if (!string.IsNullOrEmpty(result[4])) foundAny = true;
         }
 
@@ -108,7 +105,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p5 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_FOOTER_TEXT_PARAMETER));
         if (p5 != null)
         {
-            result[5] = GetValueAtFirstEqual(p5);
+            result[5] = SimpleUtility.GetValueAtFirstEqual(p5);
             if (!string.IsNullOrEmpty(result[5])) foundAny = true;
         }
 
@@ -116,7 +113,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p6 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_IMAGE_URL_PARAMETER));
         if (p6 != null)
         {
-            result[6] = GetValueAtFirstEqual(p6);
+            result[6] = SimpleUtility.GetValueAtFirstEqual(p6);
             if (!string.IsNullOrEmpty(result[6])) foundAny = true;
         }
 
@@ -124,7 +121,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p7 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_THUMBNAIL_URL_PARAMETER));
         if (p7 != null)
         {
-            result[7] = GetValueAtFirstEqual(p7);
+            result[7] = SimpleUtility.GetValueAtFirstEqual(p7);
             if (!string.IsNullOrEmpty(result[7])) foundAny = true;
         }
 
@@ -132,7 +129,7 @@ public class EmbedCommandsModule : BaseCommandModule
         string? p8 = elementValue.FirstOrDefault((i) => i.ToLower().StartsWith(CMD_CONSTANT.EMBED_TITLE_PARAMETER));
         if (p8 != null)
         {
-            result[8] = GetValueAtFirstEqual(p8);
+            result[8] = SimpleUtility.GetValueAtFirstEqual(p8);
             if (!string.IsNullOrEmpty(result[8])) foundAny = true;
         }
     }
@@ -157,32 +154,36 @@ public class EmbedCommandsModule : BaseCommandModule
     public static async Task<DiscordMessage?> Create(DiscordChannel channel, string? authorIconUrl, string? authorName, string? embedColor,
         string? embedDesc, string? footerIconUrl, string? footerText, string? imageUrl, string? thumbnailUrl, string? title)
     {
-        DiscordEmbed embed = new DiscordEmbedBuilder
-        {
-            Author = new DiscordEmbedBuilder.EmbedAuthor()
-            { 
-                IconUrl = authorIconUrl,
-                Name = authorName,
-            },
+        // Initialize embed.
+        DiscordEmbedBuilder embed = new DiscordEmbedBuilder {
             Color = new DiscordColor(string.IsNullOrEmpty(embedColor) ? CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT : embedColor),
             Description = string.IsNullOrEmpty(embedDesc) ? embedDesc : embedDesc.Replace("\\n", "\n"),
-            Footer = new DiscordEmbedBuilder.EmbedFooter()
-            { 
-                IconUrl = footerIconUrl,
-                Text = footerText,
-            },
             ImageUrl = imageUrl,
-            Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail()
-            {
-                Url = thumbnailUrl,
-            },
             Timestamp = DateTime.UtcNow,
             Title = title,
         };
 
+        // Set author's information.
+        if (!string.IsNullOrEmpty(authorName))
+            embed.Author = new DiscordEmbedBuilder.EmbedAuthor {
+                Name = authorName,
+                IconUrl = string.IsNullOrEmpty(authorIconUrl) ? null : authorIconUrl,
+            };
+        
+        // Set footer of embed.
+        if (!string.IsNullOrEmpty(footerText))
+            embed.Footer = new DiscordEmbedBuilder.EmbedFooter {
+                Text = footerText,
+                IconUrl = string.IsNullOrEmpty(footerIconUrl) ? null : footerIconUrl,
+            };
+
+        // Set thumbnail of embed.
+        if (!string.IsNullOrEmpty(thumbnailUrl))
+            embed.Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail { Url = thumbnailUrl, };
+
         try
         {
-            //FurmAppClient.Instance.Logger.LogInformation("[DEBUG] Sending embed...");
+            // Sending embed to channel.
             return await channel.SendMessageAsync(embed);
         }
         catch (Exception ex)
@@ -203,12 +204,6 @@ public class EmbedCommandsModule : BaseCommandModule
     {
         await Task.CompletedTask;
         return msg;
-    }
-
-    private static string? GetValueAtFirstEqual(string input)
-    {
-        int startAt = input.IndexOf('=');
-        return input.Substring(startAt + 1);
     }
 
     #endregion

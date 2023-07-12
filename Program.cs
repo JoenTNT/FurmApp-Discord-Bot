@@ -6,10 +6,7 @@ https://discord.com/api/oauth2/authorize?client_id=1119162007690686474&permissio
 using FurmAppDBot;
 
 IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
-    {
-        services.AddHostedService<Worker>();
-    })
+    .ConfigureServices(services => services.AddHostedService<Worker>())
     .Build();
 
 host.Run();

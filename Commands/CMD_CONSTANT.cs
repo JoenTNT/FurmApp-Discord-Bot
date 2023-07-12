@@ -19,40 +19,41 @@ public static class CMD_CONSTANT
     public const string GET_PREFIX_COMMAND_NAME = "getprefix";
     public const string BUTTON_COMMAND_NAME = "button";
     public const string FORM_COMMAND_NAME = "form";
+    public const string QUESTION_COMMAND_NAME = "qt";
+    public const string CREATE_COMMAND_NAME = "create";
     public const string ADD_COMMAND_NAME = "add";
     public const string GET_COMMAND_NAME = "get";
     public const string GET_ALL_COMMAND_NAME = "getall";
     public const string DELETE_COMMAND_NAME = "delete";
     public const string CONNECT_COMMAND_NAME = "connect";
     public const string PURGE_COMMAND_NAME = "purge";
+    public const string EDIT_COMMAND_NAME = "edit";
     internal const string SYNCDB_COMMAND_NAME = "syncdb";
 
     // Command descriptions
     public const string PING_COMMAND_DESCRIPTION = "Replies with Pong!";
     public const string HELP_COMMAND_DESCRIPTION = "Provides a command guide, helps, and quick start.";
     public const string EMBED_COMMAND_DESCRIPTION = "Create Embed Message.";
+    public const string EMBED_CREATE_DESCRIPTION = "Create an embed.";
+    public const string EMBED_EDIT_DESCRIPTION = "Edit one element of embed.";
     public const string BUTTON_COMMAND_DESCRIPTION = "Modifying button interface on target message.";
-    public const string FORM_COMMAND_DESCRIPTION = "Utilizing modala to make a survey utility.";
+    public const string FORM_COMMAND_DESCRIPTION = "Utilizing form modal to make a survey utility.";
+    public const string QUESTION_COMMAND_DESCRIPTION = "Modify questions in one target form.";
     public const string GET_PREFIX_COMMAND_DESCRIPTION = "Get prefix of bot command in this server.";
     public const string BUTTON_ADD_COMMAND_DESCRIPTION = "Add button interface on target message.";
     public const string BUTTON_GET_COMMAND_DESCRIPTION = "Get button information on target message.";
     public const string BUTTON_DELETE_COMMAND_DESCRIPTION = "Delete a button interface from the message, Button ID must be specific";
-    public const string ADD_FORM_COMMAND_DESCRIPTION = "Add a new form.";
+    public const string CREATE_FORM_COMMAND_DESCRIPTION = "Create or add a new server's form.";
+    public const string DELETE_FORM_COMMAND_DESCRIPTION = "Delete existing form.";
+    public const string GET_FORM_DETAIL_COMMAND_DESCRIPTION = "Show form detail information by ID.";
     public const string GET_FORMS_COMMAND_DESCRIPTION = "Get all created form information from this server.";
     public const string CONNECT_COMMAND_DESCRIPTION = "Connect the component to form with IDs.";
+    public const string QUESTION_ADD_COMMAND_DESCRIPTION = "Add question to target form.";
     public const string PURGE_COMMAND_DESCRIPTION = "Purge/Delete messages in this channel bottom-up, the command is uncounted.";
-
-    // Sub commands
-    public const string CREATE_COMMAND_NAME = "create";
-    public const string EDIT_COMMAND_NAME = "edit";
-    public const string EMBED_CREATE_DESCRIPTION = "Create an embed.";
-    public const string EMBED_EDIT_DESCRIPTION = "Edit one element of embed.";
 
     // Parameters
     public const string AMOUNT_PARAMETER = "amount";
     public const string FORM_ID_PARAMETER = "formid";
-    public const string FORM_ID_PARAMETER_DESCRIPTION = "Target form ID that has been made.";
-    public const string PURGE_AMOUNT_PARAMETER_DESCRIPTION = "How many messages will be deleted before calling this command. For example: 10";
     public const string EMBED_AUTHOR_ICON_URL_PARAMETER = "authoriconurl";
     public const string EMBED_AUTHOR_NAME_PARAMETER = "authorname";
     public const string EMBED_COLOR_PARAMETER = "embedcolor";
@@ -63,7 +64,23 @@ public static class CMD_CONSTANT
     public const string EMBED_THUMBNAIL_URL_PARAMETER = "thumbnailurl";
     public const string EMBED_TITLE_PARAMETER = "title";
     public const string MESSAGE_ID_PARAMETER = "messageid";
-    public const string MESSAGE_ID_PARAMETER_DESCRIPTION = "Target message ID, For Example: 1234567890123456789";
     public const string BUTTON_ID_PARAMETER = "buttonid";
+    public const string QUESTION_TEXT_PARAMETER = "question";
+    public const string QUESTION_INPUT_STYLE_PARAMETER = "style";
+    public const string QUESTION_PLACEHOLDER_PARAMETER = "placeholder";
+    public const string QUESTION_REQUIRED_PARAMETER = "required";
+    public const string QUESTION_MIN_PARAMETER = "min";
+    public const string QUESTION_MAX_PARAMETER = "max";
+
+    // Parameter descriptions
+    public const string FORM_ID_PARAMETER_DESCRIPTION = "Target form ID that has been made.";
+    public const string PURGE_AMOUNT_PARAMETER_DESCRIPTION = "How many messages will be deleted before calling this command. For example: 10";
+    public const string MESSAGE_ID_PARAMETER_DESCRIPTION = "Target message ID, For Example: 1234567890123456789";
     public const string BUTTON_ID_PARAMETER_DESCRIPTION = "Target button ID, each button has unique ID";
+    public const string QUESTION_TEXT_PARAMETER_DESCRIPTION = "The question itself. For example: \"What is your Favourite Music?\"";
+    public const string QUESTION_PLACEHOLDER_PARAMETER_DESCRIPTION = "A hint to help user answering a question. For example: \"Insert Genre or Song Title here...\"";
+    public const string QUESTION_STYLE_PARAMETER_DESCRIPTION = "Input field style, paragraph or short?";
+    public const string QUESTION_REQUIRED_PARAMETER_DESCRIPTION = "Does user must answer the question?";
+    public const string QUESTION_MIN_PARAMETER_DESCRIPTION = "Minimal length of letter that user must input. Default is 1.";
+    public const string QUESTION_MAX_PARAMETER_DESCRIPTION = "Maximal length of letter that user can input. Default is 512.";
 }

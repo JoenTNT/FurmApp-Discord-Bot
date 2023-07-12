@@ -1,3 +1,4 @@
+using DSharpPlus.Exceptions;
 using DSharpPlus.SlashCommands;
 using FurmAppDBot.Commands.Providers;
 
@@ -18,6 +19,14 @@ public class HelpSlashCommandGroup : ApplicationCommandModule
         var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
         await ctx.DeleteResponseAsync();
 
-        await HelpCommandsModule.ChooseCommand(ctx.User, msgHandler, commandName);
+        try
+        {
+            // Set initial command name to main if user didn't input any.
+            if (string.IsNullOrEmpty(commandName)) commandName = HelpCommandsModule.MAIN_HELP_PAGE_KEY;
+
+            // Start by choosing command.
+            await HelpCommandsModule.ChooseCommand(ctx.Client, ctx.User, msgHandler, commandName);
+        }
+        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
     }
 }

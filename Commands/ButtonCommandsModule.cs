@@ -401,7 +401,10 @@ public class ButtonCommandsModule : BaseCommandModule
         // Get all button from message.
         List<DiscordButtonComponent> btns = new();
         foreach (var comp in targetMsg.Components)
-            btns.AddRange(comp.Components.OfType<DiscordButtonComponent>());
+        {
+            foreach (var btn in comp.Components.OfType<DiscordButtonComponent>())
+                btns.Add(btn);
+        }
 
         // Check if there's no button in the target message.
         if (btns.Count == 0)
@@ -428,7 +431,8 @@ public class ButtonCommandsModule : BaseCommandModule
 
             // Breakdown detail information.
             d = temp[$"{targetMsg.Id}"];
-            embed.Description += $"`{btns[i].Label}` (Emoji: {btns[i].Emoji.Name}; ID: `{btns[i].CustomId}`; ";
+            embed.Description += $"`{(string.IsNullOrEmpty(btns[i].Label) ? "NO LABEL" : btns[i].Label)}` "
+                + $"(Emoji: {(btns[i].Emoji == null ? "`NO EMOJI`" : btns[i].Emoji.Name)}; ID: `{btns[i].CustomId}`; ";
 
             // Check if form information not exists.
             if (d == null || !d.ContainsKey(btns[i].CustomId) || string.IsNullOrEmpty(d[btns[i].CustomId]))
@@ -443,7 +447,8 @@ public class ButtonCommandsModule : BaseCommandModule
 
         // Summarize information, create the message handler.
         msgBuilder.Content = string.Empty;
-        embed.Description = $"There are {btns.Count} Buttons, these are the information "
+        embed.Description = $"`Message` => https://discord.com/channels/{targetMsg.Channel.GuildId}/{targetMsg.ChannelId}/{targetMsg.Id}\n"
+            + $"There are {btns.Count} Buttons, these are the information "
             + $"(keep the information only for Admin and Mods):\n\n"
             + $"{embed.Description}";
         msgBuilder.AddEmbed(embed);

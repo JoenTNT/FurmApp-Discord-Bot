@@ -93,6 +93,7 @@ public class Worker : BackgroundService
         _commandExtension.RegisterCommands<ConnectCommandsModule>();
         _commandExtension.RegisterCommands<EmbedCommandsModule>();
         _commandExtension.RegisterCommands<FormCommandsModule>();
+        _commandExtension.RegisterCommands<QuestionCommandsModule>();
 
         _slashExtensionConfig = new SlashCommandsConfiguration();
 
@@ -103,6 +104,7 @@ public class Worker : BackgroundService
         _slashExtension.RegisterCommands<ConnectSlashCommandGroup>();
         _slashExtension.RegisterCommands<EmbedSlashCommandGroup>();
         _slashExtension.RegisterCommands<FormSlashCommandGroup>();
+        _slashExtension.RegisterCommands<QuestionSlashCommandGroup>();
 
         // Initialize singletons
         FurmAppClient.Init(_client, _logger, _config);
@@ -199,12 +201,7 @@ public class Worker : BackgroundService
 
     private async Task ClientGuildCreatedCallback(DiscordClient client, GuildCreateEventArgs args)
     {
-        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.INTERFACE_DATABASE_NAME);
-        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.FORM_DATABASE_NAME);
-        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.SUBMISSION_DATABASE_NAME);
-        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.BACKUP_DATABASE_NAME);
-        await MainDatabase.Instance.InitCollection(args.Guild.Id, DB_CONSTANT.CONFIG_DATABASE_NAME);
-        await args.Guild.GetDefaultChannel().SendMessageAsync("Hello There!");
+        await Task.CompletedTask;
     }
 
     private async Task ClientGuildDeletedCallback(DiscordClient client, GuildDeleteEventArgs args)
