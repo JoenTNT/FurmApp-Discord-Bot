@@ -27,47 +27,55 @@ public class FormCommandsModule : BaseCommandModule
 
         try
         {
-            // Check form ID input.
-            switch (commandName.ToLower())
+            try
             {
-                case CMD_CONSTANT.ADD_COMMAND_NAME when string.IsNullOrEmpty(formID):
-                case CMD_CONSTANT.GET_COMMAND_NAME when string.IsNullOrEmpty(formID):
-                    // Cancel process if form ID not input.
-                    await msgHandler.ModifyAsync($"Please provide a Form ID, use `{CMD_CONSTANT.GET_ALL_COMMAND_NAME}` "
-                        + "command to see all registered Forms.");
-                    return;
+                // Check form ID input.
+                switch (commandName.ToLower())
+                {
+                    case CMD_CONSTANT.ADD_COMMAND_NAME when string.IsNullOrEmpty(formID):
+                    case CMD_CONSTANT.GET_COMMAND_NAME when string.IsNullOrEmpty(formID):
+                        // Cancel process if form ID not input.
+                        await msgHandler.ModifyAsync($"Please provide a Form ID, use `{CMD_CONSTANT.GET_ALL_COMMAND_NAME}` "
+                            + "command to see all registered Forms.");
+                        return;
+                }
+
+                // Selecting the command by name.
+                switch (commandName)
+                {
+                    case CMD_CONSTANT.ADD_COMMAND_NAME when !string.IsNullOrEmpty(formID):
+                        await Add(msgHandler, formID);
+                        break;
+                    
+                    case CMD_CONSTANT.GET_COMMAND_NAME when !string.IsNullOrEmpty(formID):
+                        await Get(msgHandler, formID);
+                        break;
+
+                    case CMD_CONSTANT.DELETE_COMMAND_NAME:
+                        await Delete(ctx.User, msgHandler, formID);
+                        break;
+                    
+                    case CMD_CONSTANT.GET_ALL_COMMAND_NAME:
+                        await GetAll(msgHandler, new DiscordEmbedBuilder.EmbedAuthor {
+                            IconUrl = ctx.Client.CurrentUser.AvatarUrl,
+                            Name = ctx.Client.CurrentUser.Username,
+                        });
+                        break;
+                }
             }
-
-            // Selecting the command by name.
-            switch (commandName)
+            catch (DBClientTimeoutException) // When database connection has timed out.
             {
-                case CMD_CONSTANT.ADD_COMMAND_NAME when !string.IsNullOrEmpty(formID):
-                    await Add(msgHandler, formID);
-                    break;
-                
-                case CMD_CONSTANT.GET_COMMAND_NAME when !string.IsNullOrEmpty(formID):
-                    await Get(msgHandler, formID);
-                    break;
-
-                case CMD_CONSTANT.DELETE_COMMAND_NAME:
-                    await Delete(ctx.User, msgHandler, formID);
-                    break;
-                
-                case CMD_CONSTANT.GET_ALL_COMMAND_NAME:
-                    await GetAll(msgHandler, new DiscordEmbedBuilder.EmbedAuthor {
-                        IconUrl = ctx.Client.CurrentUser.AvatarUrl,
-                        Name = ctx.Client.CurrentUser.Username,
-                    });
-                    break;
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            }
+            catch (FormNotFoundException) // When getting form is not found.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists, abort the process.");
             }
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        catch (DBClientTimeoutException)
-        {
-            // Database connection has timed out, abort the process.
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
-            return;
-        }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
+        
     }
 
     #endregion
@@ -79,19 +87,16 @@ public class FormCommandsModule : BaseCommandModule
         // Intialize initial data.
         var response = new DiscordMessageBuilder();
 
-        // Check if form with ID already exists.
-        if (await FormInterfaceData.Exists(msgHandler.Channel.Guild.Id, formID))
+        try
         {
-            // Notify with abort process.
+            // Checking if form already exists.
+            await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
             response.WithContent($"Form `{formID}` has already been registered, abort the process.");
         }
-        else
+        catch (FormNotFoundException)
         {
-            // Create and save new data.
-            var d = await FormInterfaceData.GetData(msgHandler.Channel.Guild.Id, formID);
-            await d.SaveData();
-
-            // notify with success message.
+            // Creating form if not yet exists.
+            await FormData.CreateData(msgHandler.Channel.Guild.Id, formID);
             response.WithContent($"Successfully registered form with ID: `{formID}`");
         }
 
@@ -101,45 +106,31 @@ public class FormCommandsModule : BaseCommandModule
 
     public static async Task Get(DiscordMessage msgHandler, string formID)
     {
-        // Check if form with ID already exists.
-        if (await FormInterfaceData.Exists(msgHandler.Channel.Guild.Id, formID))
+        // Intialize initial data.
+        var msgBuilder = new DiscordMessageBuilder();
+        var embed = new DiscordEmbedBuilder() {
+            Author = new DiscordEmbedBuilder.EmbedAuthor {
+                Name = msgHandler.Author.Username,
+                IconUrl = msgHandler.Author.AvatarUrl,
+            },
+            Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
+            Title = $"Form Detail (ID: {formID})",
+            Description = string.Empty,
+        };
+
+        // Receive information.
+        var form = await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
+        embed.Description += $"```There are {form.QuestionCount} Question(s) in this form.\n"
+            + $"You can create {QuestionCommandsModule.MAX_QUESTION_LIMIT - form.QuestionCount} more question(s).```";
+        for (int i = 0; i < form.QuestionCount; i++)
         {
-            // Intialize initial data.
-            var msgBuilder = new DiscordMessageBuilder();
-            var embed = new DiscordEmbedBuilder() {
-                Author = new DiscordEmbedBuilder.EmbedAuthor {
-                    Name = msgHandler.Author.Username,
-                    IconUrl = msgHandler.Author.AvatarUrl,
-                },
-                Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
-                Title = $"Form Detail (ID: {formID})",
-                Description = string.Empty,
-            };
-
-            // Receive information.
-            var form = await FormInterfaceData.GetData(msgHandler.Channel.Guild.Id, formID);
-            for (int i = 0; i < form.QuestionCount; i++)
-            {
-                embed.Description += $"{i + 1}. `{form[i].Label}`\n"
-                    + $"┠-`placeholder`: {form[i].Placeholder}\n"
-                    + $"┠-[`style`: {form[i].Style}; `required`: {form[i].Required}]\n"
-                    + $"┖-[`min` = {form[i].MinimumLength}; `max` = {form[i].MaximumLength}]\n";
-            }
-
-            // Send result of form detail
-            msgBuilder.Embed = embed;
-            await msgHandler.ModifyAsync(msgBuilder);
-            return;
+            embed.AddField($"{i + 1}. `{form[i].Label}`\n", $"┠-`placeholder`: {form[i].Placeholder}\n"
+                + $"┠-[`style`: {form[i].Style}; `required`: {form[i].Required}; `min` = {form[i].MinimumLength}; `max` = {form[i].MaximumLength}]\n");
         }
 
-        try
-        {
-            await msgHandler.ModifyAsync($"Form does not exists.\n"
-                + "This message will be delete automatically in 3 2 1...");
-            await Task.Delay(3000);
-            await msgHandler.DeleteAsync();
-        }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+        // Send result of form detail
+        msgBuilder.Embed = embed;
+        await msgHandler.ModifyAsync(msgBuilder);
     }
 
     public static async Task Delete(DiscordUser user, DiscordMessage msgHandler, string? formID = null)

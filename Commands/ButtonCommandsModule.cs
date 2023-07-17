@@ -26,67 +26,56 @@ public class ButtonCommandsModule : BaseCommandModule
 
         try
         {
-            // Selecting the command by name.
-            switch (commandName.ToLower())
+            try
             {
-                case CMD_CONSTANT.ADD_COMMAND_NAME:
-                    await Add(msgHandler, ctx, messageID);
-                    break;
-                
-                case CMD_CONSTANT.GET_COMMAND_NAME:
-                    await Get(msgHandler, ctx, messageID);
-                    break;
+                // Selecting the command by name.
+                switch (commandName.ToLower())
+                {
+                    case CMD_CONSTANT.ADD_COMMAND_NAME:
+                        await Add(msgHandler, ctx, messageID);
+                        break;
+                    
+                    case CMD_CONSTANT.GET_COMMAND_NAME:
+                        await Get(msgHandler, ctx, messageID);
+                        break;
 
-                case CMD_CONSTANT.DELETE_COMMAND_NAME:
-                    await Delete(msgHandler, ctx, messageID, buttonID);
-                    break;
+                    case CMD_CONSTANT.DELETE_COMMAND_NAME:
+                        await Delete(msgHandler, ctx, messageID, buttonID);
+                        break;
+                }
             }
-        }
-        catch (FormatException) // Wrong input format.
-        {
-            try
+            catch (DBClientTimeoutException) // When database connection has timed out.
             {
-                await msgHandler.ModifyAsync("Bad argument inserted to message ID, insert numbers only.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-            }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        }
-        catch (NotFoundException) // Message not found.
-        {
-            try
-            {
-                await msgHandler.ModifyAsync("The message you are looking for does not exists.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-            }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        }
-        catch (DBClientTimeoutException)
-        {
-            try
-            {
-                // Database connection has timed out, abort the process.
+                // Notify by message handler.
                 await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
             }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
         }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     public async Task Add(DiscordMessage msgHandler, CommandContext ctx, string messageID)
     {
         // Search for target message.
-        DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
-
-        // Check if the target message is a user message, this must be prevent due to Discord limitation.
-        if (!msgFound.Author.IsBot)
+        DiscordMessage msgFound;
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID)); }
+        catch (NotFoundException) // Message not found exception.
         {
-            await msgHandler.ModifyAsync("Cannot target this user's message.\n"
-                + "This message will be delete automatically in 3 2 1...");
-            await Task.Delay(3000);
-            await msgHandler.DeleteAsync();
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("The message you are looking for does not exists, abort the process");
+            return;
+        }
+        catch (FormatException) // Wrong input format.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Message ID must be numbers only, abort the process.");
+            return;
+        }
+
+        // Check if the target message is not the bot itself, this must be prevent due to Discord limitation.
+        if (msgFound.Author.Id != ctx.Client.CurrentUser.Id)
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Cannot target this user's message, abort the process.");
             return;
         }
 
@@ -97,7 +86,20 @@ public class ButtonCommandsModule : BaseCommandModule
     public async Task Get(DiscordMessage msgHandler, CommandContext ctx, string messageID)
     {
         // Search for target message.
-        DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+        DiscordMessage msgFound;
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID)); }
+        catch (NotFoundException) // Message not found exception.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("The message you are looking for does not exists, abort the process");
+            return;
+        }
+        catch (FormatException) // Wrong input format.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Message ID must be numbers only, abort the process.");
+            return;
+        }
 
         // Get and send information.
         await Get(new DiscordEmbedBuilder.EmbedAuthor {
@@ -109,7 +111,20 @@ public class ButtonCommandsModule : BaseCommandModule
     public async Task Delete(DiscordMessage msgHandler, CommandContext ctx, string messageID, string? buttonID = null)
     {
         // Search for target message.
-        DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+        DiscordMessage msgFound;
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID)); }
+        catch (NotFoundException) // Message not found exception.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("The message you are looking for does not exists, abort the process.");
+            return;
+        }
+        catch (FormatException) // Wrong input format.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Message ID must be numbers only, abort the process.");
+            return;
+        }
 
         // Check if user did not provide the button ID, then make user choosing it.
         if (string.IsNullOrEmpty(buttonID))
@@ -118,14 +133,9 @@ public class ButtonCommandsModule : BaseCommandModule
         // Check if there's no respond from user.
         if (string.IsNullOrEmpty(buttonID))
         {
-            try
-            {
-                await msgHandler.ModifyAsync("No Respond from user, abort the process.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-            }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+            // Notify by message handler.
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("Timeout! No Respond from user, abort the process."));
             return;
         }
 
@@ -209,7 +219,8 @@ public class ButtonCommandsModule : BaseCommandModule
         // Timeout response if user didn't pick any button style
         if (pickButton.TimedOut)
         {
-            await TimeoutMessage(msgHandler);
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Timeout! Abort the process.");
             return;
         }
 
@@ -258,7 +269,8 @@ public class ButtonCommandsModule : BaseCommandModule
             // Timeout response if not sending any Button Text message.
             if (skipTask.Result != null && skipTask.Result.Value.TimedOut)
             {
-                await TimeoutMessage(msgHandler);
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("Timeout! Abort the process.");
                 return;
             }
 
@@ -296,7 +308,8 @@ public class ButtonCommandsModule : BaseCommandModule
             // Timeout response if not sending any reaction message.
             if (pickIcon.TimedOut)
             {
-                await TimeoutMessage(msgHandler);
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("Timeout! Abort the process.");
                 return;
             }
 
@@ -321,7 +334,8 @@ public class ButtonCommandsModule : BaseCommandModule
             // Check skipped response, and check timeout.
             if (completedTask == skipTask && skipTask.Result != null && skipTask.Result.Value.TimedOut)
             {
-                await TimeoutMessage(msgHandler);
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("Timeout! Abort the process.");
                 return;
             }
 
@@ -348,7 +362,8 @@ public class ButtonCommandsModule : BaseCommandModule
         // Check if timeout.
         if (buttonIDInput.TimedOut)
         {
-            await TimeoutMessage(msgHandler);
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Timeout! Abort the process.");
             return;
         }
 
@@ -372,10 +387,17 @@ public class ButtonCommandsModule : BaseCommandModule
             emoji: btnIcon == null ? null : new DiscordComponentEmoji(btnIcon)));
 
         // Saving to database.
-        ButtonInterfaceData buttonInterfaceData = await ButtonInterfaceData.GetData(
-            targetMsg.Channel.Guild.Id,
-            targetMsg.Channel.Id
-        );
+        InterfaceData buttonInterfaceData;
+        try
+        {
+            // Get data from database.
+            buttonInterfaceData = await InterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.Channel.Id);
+        }
+        catch (InterfaceUnregisteredException)
+        {
+            // Create new data if not found
+            buttonInterfaceData = await InterfaceData.CreateData(targetMsg.Channel.Guild.Id, targetMsg.Channel.Id);
+        }
         buttonInterfaceData.AddButton($"{targetMsg.Id}", btnID);
         await buttonInterfaceData.SaveData();
         
@@ -417,32 +439,44 @@ public class ButtonCommandsModule : BaseCommandModule
         }
 
         // Get button information from database.
-        ButtonInterfaceData? temp;
+        InterfaceData? temp = await MainDatabase.Instance.HandleDBProcess<InterfaceData?>(async () => {
+            try { return await InterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.ChannelId); }
+            catch (InterfaceUnregisteredException) { return null; }
+        });
+
+        // Check if it the button interface is found.
+        if (temp == null)
+        {
+            // Give unregistered information.
+            embed.Title = "[MESSAGE UNREGISTERED]";
+        }
+
         IReadOnlyDictionary<string, string>? d;
         for (int i = 0; i < btns.Count; i++)
         {
-            // Receive button interface data from database.
-            temp = await MainDatabase.Instance.HandleDBProcess<ButtonInterfaceData>(async () => {
-                return await ButtonInterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.ChannelId);
-            });
-
-            // Check if it the button interface is not found.
-            if (temp == null) continue;
-
-            // Breakdown detail information.
-            d = temp[$"{targetMsg.Id}"];
+            // Breakdown button detail information.
             embed.Description += $"`{(string.IsNullOrEmpty(btns[i].Label) ? "NO LABEL" : btns[i].Label)}` "
                 + $"(Emoji: {(btns[i].Emoji == null ? "`NO EMOJI`" : btns[i].Emoji.Name)}; ID: `{btns[i].CustomId}`; ";
 
-            // Check if form information not exists.
-            if (d == null || !d.ContainsKey(btns[i].CustomId) || string.IsNullOrEmpty(d[btns[i].CustomId]))
+            // Check if it the button interface is found.
+            if (temp == null)
             {
+                // Set unregistered information.
                 embed.Description += $"Form: `UNASSIGNED`)\n";
-                continue;
             }
-
-            // Get from information.
-            embed.Description += $"Form: `{d[btns[i].CustomId]}`)\n";
+            else
+            {
+                // Check if form information not exists.
+                d = temp.GetButtons($"{targetMsg.Id}");
+                if (d == null || !d.ContainsKey(btns[i].CustomId) || string.IsNullOrEmpty(d[btns[i].CustomId]))
+                {
+                    embed.Description += $"Form: `UNASSIGNED`)\n";
+                    return;
+                }
+                
+                // Get from information.
+                embed.Description += $"Form: `{d[btns[i].CustomId]}`)\n";
+            }
         }
 
         // Summarize information, create the message handler.
@@ -499,13 +533,17 @@ public class ButtonCommandsModule : BaseCommandModule
     {
         // Proceed deleting button from message
         DiscordButtonComponent? targetButton = null;
-        List<DiscordComponent> undeleteComponents = new();
-        foreach (var comp in targetMsg.Components)
+        List<List<DiscordComponent>> undeleteComponents = new();
+        var comps = targetMsg.Components.ToArray();
+        for (int i = 0; i < comps.Length; i++)
         {
+            // Get row component.
+            var comp = comps[i];
+
             // Already been found, skip all the checker.
             if (targetButton != null)
             {
-                undeleteComponents.Add(comp);
+                undeleteComponents.Add(comp.Components.ToList());
                 continue;
             }
 
@@ -515,12 +553,15 @@ public class ButtonCommandsModule : BaseCommandModule
             // If the target button not found.
             if (targetButton == null)
             {
-                undeleteComponents.Add(comp);
+                undeleteComponents.Add(comp.Components.ToList());
                 continue;
             }
 
             // Check if the component that will be delete is the only one component, then ignore the rest of the process.
             if (comp.Components.Count - 1 == 0) continue;
+
+            // Add empty list.
+            undeleteComponents.Add(new());
 
             // Choose all unpicked components and add it to list.
             foreach (var c in comp.Components)
@@ -529,21 +570,16 @@ public class ButtonCommandsModule : BaseCommandModule
                 if (c.Type == ComponentType.Button && targetButton.CustomId == c.CustomId) continue;
 
                 // Add the rest of components.
-                undeleteComponents.Add(c);
+                undeleteComponents[i].Add(c);
             }
         }
 
         // Check if the button has not been found, then abort the process.
         if (targetButton == null)
         {
-            try
-            {
-                await msgHandler.ModifyAsync("The message you are looking for does not exists.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-            }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+            // Notify by message handler.
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("The message you are looking for does not exists, abort the process."));
             return;
         }
 
@@ -551,18 +587,22 @@ public class ButtonCommandsModule : BaseCommandModule
         var editedMSG = new DiscordMessageBuilder(targetMsg);
         editedMSG.ClearComponents();
         foreach (var comp in undeleteComponents)
-            editedMSG.AddComponents(comp);
+            editedMSG.AddComponents(comp.ToArray());
 
         // Save updates to database.
         try
         {
-            ButtonInterfaceData data = await ButtonInterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.ChannelId);
+            InterfaceData data = await InterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.ChannelId);
             data.DeleteButton($"{targetMsg.Id}", targetButton.CustomId);
             await data.SaveData();
         }
-        catch (DBClientTimeoutException) // When the database connection has timed out
+        catch (InterfaceUnregisteredException) // When the interface was not registered in the first place.
         {
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            // Notify by message handler.
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("The message you have selected is not registered in the first place, "
+                    + "however the button has been deleted, abort the process."));
+            await targetMsg.ModifyAsync(editedMSG);
             return;
         }
 
@@ -571,17 +611,6 @@ public class ButtonCommandsModule : BaseCommandModule
         await msgHandler.ModifyAsync(new DiscordMessageBuilder {
             Content = "Successfully deleted the button, you can now delete this message.",
         });
-    }
-
-    /// <summary>
-    /// Used everytime action has timeout.
-    /// </summary>
-    /// <param name="msgHandler">The message action handler</param>
-    private static async Task TimeoutMessage(DiscordMessage msgHandler)
-    {
-        await msgHandler.ModifyAsync("Timeout! Automatically delete this message in 3 2 1...");
-        await Task.Delay(3000);
-        await msgHandler.DeleteAsync();
     }
 
     /// <summary>

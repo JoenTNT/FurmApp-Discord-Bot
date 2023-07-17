@@ -41,6 +41,7 @@ public class EmbedSlashCommandGroup : ApplicationCommandModule
         await rmHandler.DeleteAsync();
     }
     
+    // TODO: Create an edit command for embed.
     [SlashCommand(CMD_CONSTANT.EDIT_COMMAND_NAME, CMD_CONSTANT.EMBED_EDIT_DESCRIPTION)]
     public async Task Edit(InteractionContext ctx,
         [Option("MessageID", "Target message ID")]
@@ -50,16 +51,16 @@ public class EmbedSlashCommandGroup : ApplicationCommandModule
         [Option("Value", "Set value of the element, value may be vary and may not be always work.")]
         string value)
     {
-        await ctx.DeleteResponseAsync();
-        try
-        {
-            DiscordMessage msg = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
-            await EmbedCommandsModule.Edit(msg, element, value);
-        }
-        catch (Exception)
-        {
-            // TODO: Handle exception.
-            return;
-        }
+        // await ctx.DeleteResponseAsync();
+        // try
+        // {
+        //     DiscordMessage msg = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+        //     await EmbedCommandsModule.Edit(msg, element, value);
+        // }
+        // catch (Exception)
+        // {
+        //     // TODO: Handle exception.
+        //     return;
+        // }
     }
 }

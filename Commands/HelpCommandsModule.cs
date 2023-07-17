@@ -65,7 +65,7 @@ public class HelpCommandsModule : BaseCommandModule
             // Start by choosing command.
             await ChooseCommand(ctx.Client, ctx.User, msgHandler, commandName);
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     #endregion

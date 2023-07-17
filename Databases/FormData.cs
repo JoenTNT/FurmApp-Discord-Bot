@@ -10,7 +10,7 @@ using MongoDB.Driver;
 namespace FurmAppDBot.Databases;
 
 [Serializable]
-public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDatabase
+public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
 {
     #region structs
 
@@ -38,6 +38,14 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     private ulong _guildID = 0;
     private string _formID = string.Empty;
 
+    /// <summary>
+    /// This channel name by default is empty.
+    /// Admin/Mod can set this info to make sure which channel they want user's submission will be send.
+    /// This is just a customization, by default user's submission will be send to channel with form ID as a name.
+    /// WARNING: Same channel name with different form submission is possible, it is recommended to use form ID as channel name.
+    /// </summary>
+    private string _channelName = string.Empty;
+
     #endregion
 
     #region Properties
@@ -46,6 +54,9 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     /// Get question information by question number.
     /// Question number starts from 0.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Index is out of range.
+    /// </exception>
     public TextInputComponent this[int questionNumber] => new TextInputComponent(
         _questions[questionNumber].question, $"q{questionNumber}")
     {
@@ -62,13 +73,21 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
 
     public int QuestionCount => _questions.Count;
 
+    /// <summary>
+    /// This channel name by default is empty.
+    /// Admin/Mod can set this info to make sure which channel they want user's submission will be send.
+    /// This is just a customization, by default user's submission will be send to channel with form ID as a name.
+    /// WARNING: Same channel name with different form submission is possible, it is recommended to use form ID as channel name.
+    /// </summary>
+    public string ChannelName => string.IsNullOrEmpty(_channelName) ? _formID : _channelName;
+
     #endregion
 
     #region Constructor
 
-    public FormInterfaceData(MainDatabase database) : base(database) { }
+    public FormData(MainDatabase database) : base(database) { }
 
-    public FormInterfaceData(MainDatabase database, ulong guildID, string formID) : base(database)
+    public FormData(MainDatabase database, ulong guildID, string formID) : base(database)
     {
         _guildID = guildID;
         _formID = formID;
@@ -78,9 +97,9 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
 
     #region ILoadDatabase
 
-    /// <para>
+    /// <summary>
     /// WARNING: This will replace the questions data, do not run unless you have backed up the data.
-    /// </para>
+    /// </summary>
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
     /// </exception>
@@ -157,13 +176,13 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
 
     public async override Task ConnectElement(DataElementBase with, params string[] keys)
     {
-        if (with is ButtonInterfaceData)
+        if (with is InterfaceData)
         {
             // Convert to form interface data
-            var btnData = (ButtonInterfaceData)with;
+            var btnData = (InterfaceData)with;
 
             // First index is the message ID, second index is the button ID.
-            btnData.SetFormID(keys[0], keys[1], _formID);
+            btnData.SetButtonFormID(keys[0], keys[1], _formID);
             await btnData.SaveData();
             return;
         }
@@ -198,17 +217,85 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     /// Remove a question from the form data.
     /// Must run Save method to make sure it's saved to database.
     /// </summary>
-    /// <param name="questionNumber">Question number starts from 0</param>
-    public void RemoveQuestion(int questionNumber)
+    /// <param name="index">Question index starts from 0</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Index is out of range.
+    /// </exception>
+    public void RemoveQuestion(int index) => _questions.RemoveAt(index);
+
+    /// <summary>
+    /// Move question to target index.
+    /// </summary>
+    /// <param name="fromIndex">The target question</param>
+    /// <param name="toIndex">Move to this index</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Index is out of range.
+    /// </exception>
+    public void MoveQuestion(int fromIndex, int toIndex)
     {
-        var deletedContent = _questions[questionNumber];
-        _questions.RemoveAt(questionNumber);
+        // If the index is the same value, then no need to process.
+        if (fromIndex == toIndex) return;
+
+        // Shifting questions.
+        var temp = _questions[fromIndex];
+        _questions.RemoveAt(fromIndex);
+        _questions.Insert(toIndex, temp);
+    }
+
+    /// <summary>
+    /// Set question properties by question number.
+    /// </summary>
+    /// <param name="questionNum">Question number starts from 0.</param>
+    /// <param name="qText">Question text content</param>
+    /// <param name="style">Text component style</param>
+    /// <param name="placeholder">Placeholder hint for user</param>
+    /// <param name="req">Is the question required for user to input?</param>
+    /// <param name="min">Minimal length of letters user must answer</param>
+    /// <param name="max">Maximal length of letters user must answer</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Index is out of range.
+    /// </exception>
+    public void SetQuestionProps(int questionNum, string? qText = null, TextInputStyle? style = null,
+        string? placeholder = null, bool? req = null, int? min = null, int? max = null)
+    {
+        // Get property information.
+        QuestionProperties prop = _questions[questionNum];
+
+        // Check any properties that will be changed.
+        if (qText != null) prop.question = qText;
+        if (style != null) prop.style = style == TextInputStyle.Short ? TextInputStyle.Short : TextInputStyle.Paragraph;
+        if (placeholder != null) prop.placeholder = placeholder;
+        if (req != null) prop.required = req == true ? true : false;
+        if (min != null) prop.minLength = (int)min;
+        if (max != null) prop.maxLength = (int)max;
+
+        // Set back to source.
+        _questions[questionNum] = prop;
+    }
+
+    /// <summary>
+    /// Swap between 2 question position.
+    /// </summary>
+    /// <param name="q1Index">Question 1 index</param>
+    /// <param name="q2Index">Question 2 index</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Index is out of range.
+    /// </exception>
+    public void SwapQuestion(int q1Index, int q2Index)
+    {
+        // If the index is the same value, then no need to process.
+        if (q1Index == q2Index) return;
+
+        // Swapping 2 questions.
+        var temp = _questions[q1Index];
+        _questions[q1Index] = _questions[q2Index];
+        _questions[q2Index] = temp;
     }
 
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
     /// </exception>
-    public static async Task<bool> Exists(ulong guildID, string formID)
+    private static async Task<bool> Exists(ulong guildID, string formID)
     {
         // Search via cache.
         var db = MainDatabase.Instance;
@@ -220,25 +307,27 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
 
             // Find data from database collection using filter.
             var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, formID);
-            var formFound = await collection.Find(filter).ToListAsync();
-
-            // Check if not found, then it is valid.
-            if (formFound.Count == 0) return;
-
-            // Set result value.
-            result = true;
+            result = await collection.Find(filter).AnyAsync();
         });
 
         return result;
     }
 
+    
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
     /// </exception>
-    public static async Task<FormInterfaceData> GetData(ulong guildID, string formID)
+    /// <exception cref="FormNotFoundException">
+    /// Specific case if form does not exists from database.
+    /// </exception>
+    public static async Task<FormData> GetData(ulong guildID, string formID)
     {
+        // Check if form exists.
+        if (!(await Exists(guildID, formID)))
+            throw new FormNotFoundException(guildID, formID);
+
         // Immediately load data from database
-        FormInterfaceData data = new FormInterfaceData(MainDatabase.Instance, guildID, formID);
+        FormData data = new FormData(MainDatabase.Instance, guildID, formID);
         await data.LoadData();
         return data;
     }
@@ -246,9 +335,23 @@ public sealed class FormInterfaceData : DataElementBase, ILoadDatabase, ISaveDat
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
     /// </exception>
-    public static async Task DeleteData()
+    public static async Task<FormData> CreateData(ulong guildID, string formID)
     {
-        await Task.CompletedTask;
+        // Declare data.
+        FormData data;
+
+        // Check if form exists.
+        if (await Exists(guildID, formID))
+        {
+            data = new FormData(MainDatabase.Instance, guildID, formID);
+            await data.LoadData();
+            return data;
+        }
+        
+        // Immediately create data and save it to database.
+        data = new FormData(MainDatabase.Instance, guildID, formID);
+        await data.SaveData();
+        return data;
     }
 
     #endregion

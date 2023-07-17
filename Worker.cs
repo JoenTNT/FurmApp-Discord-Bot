@@ -68,7 +68,7 @@ public class Worker : BackgroundService
         _client.MessageCreated += ClientMessageCreatedCallback;
         _client.GuildCreated += ClientGuildCreatedCallback;
         _client.GuildDeleted += ClientGuildDeletedCallback;
-        // _client.InteractionCreated += ClientInteractionCreatedCallback;
+        // _client.InteractionCreated += ClientInteractionCreatedCallback; // TODO: Other interaction case.
         _client.ComponentInteractionCreated += ClientComponentInteractionCreatedCallback;
 
         // Interactivity configuration
@@ -94,6 +94,8 @@ public class Worker : BackgroundService
         _commandExtension.RegisterCommands<EmbedCommandsModule>();
         _commandExtension.RegisterCommands<FormCommandsModule>();
         _commandExtension.RegisterCommands<QuestionCommandsModule>();
+        _commandExtension.RegisterCommands<ContainerCommandsModule>();
+        _commandExtension.RegisterCommands<SettingCommandsModule>();
 
         _slashExtensionConfig = new SlashCommandsConfiguration();
 
@@ -105,6 +107,8 @@ public class Worker : BackgroundService
         _slashExtension.RegisterCommands<EmbedSlashCommandGroup>();
         _slashExtension.RegisterCommands<FormSlashCommandGroup>();
         _slashExtension.RegisterCommands<QuestionSlashCommandGroup>();
+        _slashExtension.RegisterCommands<ContainerSlashCommandGroup>();
+        _slashExtension.RegisterCommands<SettingSlashCommandGroup>();
 
         // Initialize singletons
         FurmAppClient.Init(_client, _logger, _config);
@@ -164,15 +168,6 @@ public class Worker : BackgroundService
     private async Task ClientReadyCallback(DiscordClient client, ReadyEventArgs args)
     {
         _logger.LogInformation("[DEBUG] The Bot is Up!");
-        
-        // // TEMPORARY: Only in the beginning of prototyping.
-        // foreach (var guild in client.Guilds)
-        //     await MainDatabase.Instance.AddNewGuildCollection(guild.Key);
-        // FurmAppClient.Instance.Logger.LogInformation("[DEBUG] All guild has been registered");
-
-        // foreach (var guild in client.Guilds)
-        //     await MainDatabase.Instance.DeleteAllUnusedMissingMessage(guild.Value);
-
         _isClientConnected = true;
         await Task.CompletedTask;
     }
@@ -209,10 +204,14 @@ public class Worker : BackgroundService
         await Task.CompletedTask;
     }
 
+    // TODO: Other interaction case.
     // private async Task ClientInteractionCreatedCallback(DiscordClient client, InteractionCreateEventArgs args)
     // {
+    //     // Check if interaction component was called by user.
     //     if (args.Interaction.Type == InteractionType.Component)
     //     {
+    //         // Check interaction is from button component.
+            
     //         _logger.LogInformation($"Interact with Component: {args.Interaction.Id}");
     //     }
 
@@ -221,17 +220,39 @@ public class Worker : BackgroundService
 
     private async Task ClientComponentInteractionCreatedCallback(DiscordClient client, ComponentInteractionCreateEventArgs args)
     {
-        if (args.Interaction.Type == InteractionType.Component)
+        // Check if interaction is button interaction.
+        if (args.Interaction.Data.ComponentType == ComponentType.Button)
         {
-            // _logger.LogInformation("Component Interaction has been invoked.");
-            // await args.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+            // Start interaction.
+            await args.Interaction.DeferAsync();
 
-            // _logger.LogInformation($"Interact with Component: {args.Id} (In Guild: {args.Guild.Name}; In Channel: {args.Channel.Name})");
+            // Check if interface is registered before sending Modal.
+            InterfaceData data;
+            try { data = await InterfaceData.GetData(args.Guild.Id, args.Channel.Id); }
+            catch (InterfaceUnregisteredException) { return; } /* Ignore Interaction. */
 
-            // await Task.CompletedTask;
+            // Check if form is registered before sending Modal, if not exists then ignore it.
+            var buttons = data.GetButtons($"{args.Message.Id}");
+            if (buttons == null) return;
+            if (string.IsNullOrEmpty(buttons[args.Id])) return;
+            FormData form;
+            try { form = await FormData.GetData(args.Guild.Id, buttons[args.Id]); }
+            catch (FormNotFoundException) { return; } /* Ignore Interaction. */
+
+            // Start interaction.
+            await args.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+            await Task.Delay(100);
+
+            // Check if form has no question, send information to user to report this issue.
+            if (form.QuestionCount <= 0)
+            {
+                // TODO: Send info to user to report issue.
+                return;
+            }
+            
+            // Start Modal filling by user.
+            // TODO: Create modal for user to fill in.
         }
-
-        await Task.CompletedTask;
     }
 
     #endregion

@@ -5,6 +5,7 @@ using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using FurmAppDBot.Clients;
+using FurmAppDBot.Commands.Providers;
 using FurmAppDBot.Databases.Exceptions;
 
 namespace FurmAppDBot.Commands;
@@ -19,84 +20,96 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         string formID)
     {
         // Initial respond with message handler.
-        await ctx.DeferAsync();
-        var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
-        
-        // Proceed the slash command process.
-        var rmHandler = await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Proceed!"));
+        DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Getting all informations.
-            await FormCommandsModule.Add(msgHandler, formID);
-            await rmHandler.DeleteAsync();
+            // Proceed the slash command process.
+            await ctx.DeferAsync();
+            await ctx.Interaction.DeleteOriginalResponseAsync();
+
+            try
+            {
+                // Getting all informations.
+                await FormCommandsModule.Add(msgHandler, formID);
+            }
+            catch (DBClientTimeoutException) // When database connection has timed out.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            }
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        catch (DBClientTimeoutException)
-        {
-            // Database connection has timed out, abort the process.
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
-            await rmHandler.DeleteAsync();
-            return;
-        }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     [SlashCommand(CMD_CONSTANT.GET_COMMAND_NAME, CMD_CONSTANT.GET_FORM_DETAIL_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task Get(InteractionContext ctx,
-        [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION)]
+        [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION, true)]
+        [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string formID)
     {
         // Initial respond with message handler.
-        await ctx.DeferAsync();
-        var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
-        
-        // Proceed the slash command process.
-        var rmHandler = await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Proceed!"));
+        DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Getting all informations.
-            await FormCommandsModule.Get(msgHandler, formID);
-            await rmHandler.DeleteAsync();
+            // Proceed the slash command process.
+            await ctx.DeferAsync();
+            await ctx.Interaction.DeleteOriginalResponseAsync();
+
+            try
+            {
+                // Getting all informations.
+                await FormCommandsModule.Get(msgHandler, formID);
+            }
+            catch (DBClientTimeoutException) // When database connection has timed out.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            }
+            catch (FormNotFoundException)
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists, abort the process.");
+            }
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        catch (DBClientTimeoutException)
-        {
-            // Database connection has timed out, abort the process.
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
-            await rmHandler.DeleteAsync();
-            return;
-        }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     [SlashCommand(CMD_CONSTANT.DELETE_COMMAND_NAME, CMD_CONSTANT.DELETE_FORM_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task Delete(InteractionContext ctx,
-        [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION)]
+        [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION, true)]
+        [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string? formID = null)
     {
         // Initial respond with message handler.
-        await ctx.DeferAsync();
-        var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
-        
-        // Proceed the slash command process.
-        var rmHandler = await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Proceed!"));
+        DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Getting all informations.
-            await FormCommandsModule.Delete(ctx.User, msgHandler, formID);
-            await rmHandler.DeleteAsync();
+            // Proceed the slash command process.
+            await ctx.DeferAsync();
+            await ctx.Interaction.DeleteOriginalResponseAsync();
+
+            try
+            {
+                // Getting all informations.
+                await FormCommandsModule.Delete(ctx.User, msgHandler, formID);
+            }
+            catch (DBClientTimeoutException) // When database connection has timed out.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            }
+            catch (FormNotFoundException)
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists, abort the process.");
+            }
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        catch (DBClientTimeoutException)
-        {
-            // Database connection has timed out, abort the process.
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
-            await rmHandler.DeleteAsync();
-            return;
-        }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     [SlashCommand(CMD_CONSTANT.GET_ALL_COMMAND_NAME, CMD_CONSTANT.GET_FORMS_COMMAND_DESCRIPTION)]
@@ -104,29 +117,29 @@ public class FormSlashCommandGroup : ApplicationCommandModule
     public async Task GetAll(InteractionContext ctx)
     {
         // Initial respond with message handler.
-        await ctx.DeferAsync();
-        var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
-        
-        // Proceed the slash command process.
-        var rmHandler = await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Proceed!"));
+        DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Getting all informations.
-            await FormCommandsModule.GetAll(msgHandler, new DiscordEmbedBuilder.EmbedAuthor {
-                IconUrl = ctx.Client.CurrentUser.AvatarUrl,
-                Name = ctx.Client.CurrentUser.Username,
-            });
-            await rmHandler.DeleteAsync();
+            // Proceed the slash command process.
+            await ctx.DeferAsync();
+            await ctx.Interaction.DeleteOriginalResponseAsync();
+
+            try
+            {
+                // Getting all informations.
+                await FormCommandsModule.GetAll(msgHandler, new DiscordEmbedBuilder.EmbedAuthor {
+                    IconUrl = ctx.Client.CurrentUser.AvatarUrl,
+                    Name = ctx.Client.CurrentUser.Username,
+                });
+            }
+            catch (DBClientTimeoutException) // When database connection has timed out.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            }
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        catch (DBClientTimeoutException)
-        {
-            // Database connection has timed out, abort the process.
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
-            await rmHandler.DeleteAsync();
-            return;
-        }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     // TEMPORARY: For testing modal form feature in Discord.

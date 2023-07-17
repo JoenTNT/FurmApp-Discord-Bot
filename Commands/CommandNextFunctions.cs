@@ -13,9 +13,10 @@ public class CommandNextFunctions : BaseCommandModule
     [Command(CMD_CONSTANT.PING_COMMAND_NAME)]
     public async Task Ping(CommandContext ctx) => await PingCommand.Ping(ctx);
 
-    [Command(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME)]
-    public async Task GetPrefix(CommandContext ctx)
-        => await PrefixCommand.GetPrefix(ctx);
+    // TODO: Prefix Command.
+    // [Command(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME)]
+    // public async Task GetPrefix(CommandContext ctx)
+    //     => await PrefixCommand.GetPrefix(ctx);
 
     [Command(CMD_CONSTANT.PURGE_COMMAND_NAME)]
     [RequirePermissions(Permissions.ManageGuild)]

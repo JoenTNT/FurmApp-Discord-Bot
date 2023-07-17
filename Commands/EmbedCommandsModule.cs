@@ -181,16 +181,8 @@ public class EmbedCommandsModule : BaseCommandModule
         if (!string.IsNullOrEmpty(thumbnailUrl))
             embed.Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail { Url = thumbnailUrl, };
 
-        try
-        {
-            // Sending embed to channel.
-            return await channel.SendMessageAsync(embed);
-        }
-        catch (Exception ex)
-        {
-            FurmAppClient.Instance.Logger.LogInformation(ex, string.Empty);
-            return default(DiscordMessage);
-        }
+        // Sending embed to channel.
+        return await channel.SendMessageAsync(embed);
     }
 
     /// <summary>

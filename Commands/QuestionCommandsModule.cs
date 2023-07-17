@@ -17,9 +17,19 @@ namespace FurmAppDBot.Commands;
 
 public class QuestionCommandsModule : BaseCommandModule
 {
+    #region Variables
+
+    /// <summary>
+    /// Each form has questions limit due to database size limitation.
+    /// </summary>
+    public const int MAX_QUESTION_LIMIT = 10;
+
+    #endregion
+
     #region Main
 
     [Command(CMD_CONSTANT.QUESTION_COMMAND_NAME)]
+    [RequirePermissions(Permissions.ManageGuild)]
     public async Task Question(CommandContext ctx, string commandName, string formID, params string[] inputs)
     {
         // Handle a long process when interacting
@@ -27,114 +37,163 @@ public class QuestionCommandsModule : BaseCommandModule
 
         try
         {
-            // Selecting the command by name.
-            switch (commandName)
+            try
             {
-                case CMD_CONSTANT.ADD_COMMAND_NAME:
-                    // Redefine all inputs when creating question.
-                    object[] result; bool foundInput;
-                    CreateDefinition(inputs, out result, out foundInput);
+                // Selecting the command by name.
+                switch (commandName)
+                {
+                    case CMD_CONSTANT.ADD_COMMAND_NAME:
+                        // Redefine all inputs when creating question.
+                        object[] result; bool foundInput;
+                        CreateDefinition(inputs, out result, out foundInput);
 
-                    // Check if inputs not found, then abort the process.
-                    if (!foundInput)
-                    {
-                        try
+                        // Check any property not found, then abort the process.
+                        if (!foundInput)
                         {
-                            await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists.\n"
-                                + "This message will be delete automatically in 3 2 1...");
-                            await Task.Delay(3000);
-                            await msgHandler.DeleteAsync();
-                        }
-                        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-                        return;
-                    }
-
-                    // Setting default values.
-                    if (result[1] == null) result[1] = TextInputStyle.Paragraph;
-                    if (result[3] == null) result[3] = true;
-                    if (result[4] == null) result[4] = 1;
-                    if (result[5] == null) result[5] = 512;
-                    
-                    // Required informations must be included.
-                    if (result[0] == null) // Question parameter
-                    {
-                        // Notify interaction message.
-                        await msgHandler.ModifyAsync("```[REQUIRED]\n"
-                            + "Insert main question text for user to answer.\nSend a text message here to set.```");
-
-                        // Wait for input.
-                        (string, bool) r = await WaitForMessageInput(ctx.Client.GetInteractivity(), ctx.User, msgHandler);
-
-                        // When timeout happens.
-                        if (r.Item2)
-                        {
-                            try
-                            {
-                                await msgHandler.ModifyAsync($"Timeout! Abort the process.\n"
-                                    + "This message will be delete automatically in 3 2 1...");
-                                await Task.Delay(3000);
-                                await msgHandler.DeleteAsync();
-                            }
-                            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+                            await msgHandler.ModifyAsync("Properties not found, may be false input, abort the process.");
                             return;
                         }
 
-                        // Set question text.
-                        result[0] = r.Item1;
-                    }
-                    if (result[2] == null) // Placeholder parameter
-                    {
-                        // Notify interaction message.
-                        await msgHandler.ModifyAsync("```[REQUIRED]\n"
-                            + "Insert question placeholder text, tell a hint or an answer example for user.\n"
-                            + "Send a text message here to set.```");
+                        // Setting default values.
+                        if (result[1] == null) result[1] = TextInputStyle.Paragraph;
+                        if (result[3] == null) result[3] = true;
+                        if (result[4] == null) result[4] = 1;
+                        if (result[5] == null) result[5] = 512;
                         
-                        // Wait for input.
-                        (string, bool) r = await WaitForMessageInput(ctx.Client.GetInteractivity(), ctx.User, msgHandler);
-
-                        // When timeout happens.
-                        if (r.Item2)
+                        // Required informations must be included.
+                        if (result[0] == null) // Question parameter
                         {
-                            try
+                            // Notify interaction message.
+                            await msgHandler.ModifyAsync("```[REQUIRED]\n"
+                                + "Insert main question text for user to answer.\nSend a text message here to set.```");
+
+                            // Wait for input.
+                            (string, bool) results = await WaitForMessageInput(ctx.Client.GetInteractivity(), ctx.User, msgHandler);
+
+                            // When timeout happens.
+                            if (results.Item2)
                             {
-                                await msgHandler.ModifyAsync($"Timeout! Abort the process.\n"
-                                    + "This message will be delete automatically in 3 2 1...");
-                                await Task.Delay(3000);
-                                await msgHandler.DeleteAsync();
+                                // Notify by message handler.
+                                await msgHandler.ModifyAsync($"Timeout! Abort the process.");
+                                return;
                             }
-                            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+
+                            // Set question text.
+                            result[0] = results.Item1;
+                        }
+                        if (result[2] == null) // Placeholder parameter
+                        {
+                            // Notify interaction message.
+                            await msgHandler.ModifyAsync("```[REQUIRED]\n"
+                                + "Insert question placeholder text, tell a hint or an answer example for user.\n"
+                                + "Send a text message here to set.```");
+                            
+                            // Wait for input.
+                            (string, bool) res = await WaitForMessageInput(ctx.Client.GetInteractivity(), ctx.User, msgHandler);
+
+                            // When timeout happens.
+                            if (res.Item2)
+                            {
+                                // Notify by message handler.
+                                await msgHandler.ModifyAsync($"Timeout! Abort the process.");
+                                return;
+                            }
+
+                            // Set question text.
+                            result[2] = res.Item1;
+                        }
+
+                        // Proceed inputs.
+                        await Add(msgHandler, formID, (string)result[0], (TextInputStyle)result[1], (string)result[2],
+                            (bool)result[3], (int)result[4], (int)result[5]);
+                        break;
+                    
+                    case CMD_CONSTANT.DELETE_COMMAND_NAME:
+                        // Declare initial question number.
+                        int questionNum = 0;
+
+                        // Parsing input to question number.
+                        try { questionNum = int.Parse(inputs[0]); }
+                        catch (FormatException)
+                        {
+                            // Notify by message handler.
+                            await msgHandler.ModifyAsync($"Bad input argument! Question number must start from 1, abort the process.");
                             return;
                         }
 
-                        // Set question text.
-                        result[2] = r.Item1;
-                    }
+                        // Start deleting question by question number on target Form.
+                        await Delete(msgHandler, formID, questionNum);
+                        break;
+                    
+                    case CMD_CONSTANT.EDIT_COMMAND_NAME:
+                        // Check input count, must be more than 1 inputs
+                        int inputlen = inputs.Length;
+                        if (inputlen <= 1)
+                        {
+                            // Notify by message handler.
+                            await msgHandler.ModifyAsync($"Bad argument input, must include question number & properties,"
+                                + " abort the process.");
+                            return;
+                        }
 
-                    // Proceed inputs.
-                    await Add(msgHandler, formID, (string)result[0], (TextInputStyle)result[1], (string)result[2],
-                        (bool)result[3], (int)result[4], (int)result[5]);
-                    break;
-                
-                // case CMD_CONSTANT.GET_COMMAND_NAME when !string.IsNullOrEmpty(formID):
-                //     await Get(msgHandler, formID);
-                //     break;
+                        // Check first input, must be question number.
+                        int questionNumber = 0;
+                        if (!int.TryParse(inputs[0], out questionNumber))
+                        {
+                            // Notify by message handler.
+                            await msgHandler.ModifyAsync($"First argument (Question Number) must be number, abort the process.");
+                            return;
+                        }
 
-                // case CMD_CONSTANT.DELETE_COMMAND_NAME:
-                //     await Delete(ctx.User, msgHandler, formID);
-                //     break;
+                        // Redefine all inputs when creating question.
+                        object[] r; string[] subInputs = new string[inputlen - 1]; bool fi;
+                        Array.Copy(inputs, 1, subInputs, 0, inputlen - 1);
+                        CreateDefinition(subInputs, out r, out fi);
+
+                        // Check any property not found, then abort the process.
+                        if (!fi)
+                        {
+                            await msgHandler.ModifyAsync("Properties not found, may be false input, abort the process.");
+                            return;
+                        }
+
+                        // Start editing question.
+                        await Edit(msgHandler, formID, questionNumber, (string?)r[0], (TextInputStyle?)r[1], (string?)r[2],
+                            (bool?)r[3], (int?)r[4], (int?)r[5]);
+                        break;
+
+                    // TODO: Rearrange Questions Command.
+                    case CMD_CONSTANT.SWAP_COMMAND_NAME:
+                        break;
+                }
+            }
+            catch (FormatException) // Wrong input format.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync($"Bad argument detected, some insert parameters are incorrect, abort the process.");
+            }
+            catch (DBClientTimeoutException) // When database connection has timed out.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
+            }
+            catch (FormNotFoundException)
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists, abort the process.");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("Selecting question number is out of range, abort the process.");
             }
         }
-        catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        catch (DBClientTimeoutException)
-        {
-            // Database connection has timed out, abort the process.
-            await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
-            return;
-        }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     private void CreateDefinition(string[] elementValue, out object[] result, out bool foundAny)
     {
+        // Initialize fix values.
         result = new object[6];
         foundAny = false;
 
@@ -211,7 +270,7 @@ public class QuestionCommandsModule : BaseCommandModule
 
             // Convert to integer.
             try { result[4] = int.Parse((string)result[4]); }
-            catch (Exception) { result[4] = null; }
+            catch (FormatException) { result[4] = null; }
         }
 
         // Define answer maximal length.
@@ -223,7 +282,7 @@ public class QuestionCommandsModule : BaseCommandModule
 
             // Convert to integer.
             try { result[5] = int.Parse((string)result[5]); }
-            catch (Exception) { result[5] = null; }
+            catch (FormatException) { result[5] = null; }
         }
     }
 
@@ -248,25 +307,14 @@ public class QuestionCommandsModule : BaseCommandModule
 
     #region Statics
 
+    /// <exception cref="FormNotFoundException">
+    /// Specific case if form does not exists from database.
+    /// </exception>
     public static async Task Add(DiscordMessage msgHandler, string formID, string question, TextInputStyle style,
         string placeholder, bool required, int minLength, int maxLength)
     {
-        // Check if form does exists.
-        if (!(await FormInterfaceData.Exists(msgHandler.Channel.Guild.Id, formID)))
-        {
-            try
-            {
-                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-            }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-            return;
-        }
-
         // Get form data from database.
-        var form = await FormInterfaceData.GetData(msgHandler.Channel.Guild.Id, formID);
+        var form = await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
 
         // Save data to database after adding new question.
         form.AddQuestion(question, style, placeholder, required, minLength, maxLength);
@@ -275,6 +323,42 @@ public class QuestionCommandsModule : BaseCommandModule
         // Notify saved content.
         await msgHandler.ModifyAsync($"Successfully added new question, now Form with ID `{formID}` "
             + $"has {form.QuestionCount} questions.");
+    }
+
+    /// <exception cref="FormNotFoundException">
+    /// Specific case if form does not exists from database.
+    /// </exception>
+    public static async Task Delete(DiscordMessage msgHandler, string formID, int questionNum)
+    {
+        // Get form data from database.
+        var form = await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
+
+        // Delete question from form by index (question number minus 1).
+        form.RemoveQuestion(questionNum - 1);
+        await form.SaveData();
+
+        // Notify saved content.
+        await msgHandler.ModifyAsync($"Successfully deleted question, now Form with ID `{formID}` "
+            + $"has {form.QuestionCount} questions.");
+    }
+
+    public static async Task Edit(DiscordMessage msgHandler, string formID, int questionNum,
+        string? question, TextInputStyle? style, string? placeholder, bool? required, int? minLength, int? maxLength)
+    {
+        // Change question property of form.
+        FormData form = await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
+        form.SetQuestionProps(questionNum, question, style, placeholder, required, minLength, maxLength);
+        await form.SaveData();
+        
+        // Notify success message.
+        var q = form[questionNum - 1];
+        await  msgHandler.ModifyAsync($"[Form: {formID}]\nSuccessfully changed property the question number {questionNum - 1}.\n"
+            + $"```Question     : {q.Label}\n"
+            + $"Style       : {(q.Style == TextInputStyle.Short ? "Short" : "Long")}\n"
+            + $"Placeholder : {q.Placeholder}\n"
+            + $"Required    : {q.Required}\n"
+            + $"Min Letters : {q.MinimumLength}\n"
+            + $"Max Letters : {q.MaximumLength}\n```");
     }
 
     #endregion

@@ -14,9 +14,10 @@ public class SlashCommandFunctions : ApplicationCommandModule
     public async Task Ping(InteractionContext ctx)
         => await PingCommand.Ping(ctx);
 
-    [SlashCommand(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME, CMD_CONSTANT.GET_PREFIX_COMMAND_DESCRIPTION)]
-    public async Task GetPrefix(InteractionContext ctx)
-        => await PrefixCommand.GetPrefix(ctx);
+    // TODO: Prefix Command.
+    // [SlashCommand(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME, CMD_CONSTANT.GET_PREFIX_COMMAND_DESCRIPTION)]
+    // public async Task GetPrefix(InteractionContext ctx)
+    //     => await PrefixCommand.GetPrefix(ctx);
 
     [SlashCommand(CMD_CONSTANT.PURGE_COMMAND_NAME, CMD_CONSTANT.PURGE_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]

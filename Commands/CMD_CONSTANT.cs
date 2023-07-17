@@ -16,9 +16,11 @@ public static class CMD_CONSTANT
     public const string PING_COMMAND_NAME = "ping";
     public const string HELP_COMMAND_NAME = "help";
     public const string EMBED_COMMAND_NAME = "embed";
-    public const string GET_PREFIX_COMMAND_NAME = "getprefix";
+    // public const string GET_PREFIX_COMMAND_NAME = "getprefix"; // TODO: Prefix Command.
+    public const string SETTING_COMMAND_NAME = "setting";
     public const string BUTTON_COMMAND_NAME = "button";
     public const string FORM_COMMAND_NAME = "form";
+    public const string CHANNEL_CONTAINER_COMMAND_NAME = "cont";
     public const string QUESTION_COMMAND_NAME = "qt";
     public const string CREATE_COMMAND_NAME = "create";
     public const string ADD_COMMAND_NAME = "add";
@@ -28,6 +30,10 @@ public static class CMD_CONSTANT
     public const string CONNECT_COMMAND_NAME = "connect";
     public const string PURGE_COMMAND_NAME = "purge";
     public const string EDIT_COMMAND_NAME = "edit";
+    public const string SET_COMMAND_NAME = "set";
+    public const string SWAP_COMMAND_NAME = "swap";
+    public const string CATEGORY_COMMAND_NAME = "chcat";
+    public const string INFO_COMMAND_NAME = "info";
     internal const string SYNCDB_COMMAND_NAME = "syncdb";
 
     // Command descriptions
@@ -36,10 +42,13 @@ public static class CMD_CONSTANT
     public const string EMBED_COMMAND_DESCRIPTION = "Create Embed Message.";
     public const string EMBED_CREATE_DESCRIPTION = "Create an embed.";
     public const string EMBED_EDIT_DESCRIPTION = "Edit one element of embed.";
+    public const string SETTING_COMMAND_DESCRIPTION = "Server scope settings";
     public const string BUTTON_COMMAND_DESCRIPTION = "Modifying button interface on target message.";
     public const string FORM_COMMAND_DESCRIPTION = "Utilizing form modal to make a survey utility.";
+    public const string CHANNEL_CONTAINER_COMMAND_DESCRIPTION = "If user submit form answer, where it should be send?";
+    public const string CC_SET_COMMAND_DESCRIPTION = "Name a channel which user submmision will be send to.";
     public const string QUESTION_COMMAND_DESCRIPTION = "Modify questions in one target form.";
-    public const string GET_PREFIX_COMMAND_DESCRIPTION = "Get prefix of bot command in this server.";
+    // public const string GET_PREFIX_COMMAND_DESCRIPTION = "Get prefix of bot command in this server."; // TODO: Prefix command.
     public const string BUTTON_ADD_COMMAND_DESCRIPTION = "Add button interface on target message.";
     public const string BUTTON_GET_COMMAND_DESCRIPTION = "Get button information on target message.";
     public const string BUTTON_DELETE_COMMAND_DESCRIPTION = "Delete a button interface from the message, Button ID must be specific";
@@ -49,11 +58,17 @@ public static class CMD_CONSTANT
     public const string GET_FORMS_COMMAND_DESCRIPTION = "Get all created form information from this server.";
     public const string CONNECT_COMMAND_DESCRIPTION = "Connect the component to form with IDs.";
     public const string QUESTION_ADD_COMMAND_DESCRIPTION = "Add question to target form.";
+    public const string QUESTION_DELETE_COMMAND_DESCRIPTION = "Delete question from target form.";
+    public const string QUESTION_EDIT_COMMAND_DESCRIPTION = "Edit question from targetr form.";
+    public const string SETTING_CATEGORY_COMMAND_DESCRIPTION = "Setting channel category as a submission container.";
+    public const string SETTING_INFO_COMMAND_DESCRIPTION = "Check server scope settings information.";
     public const string PURGE_COMMAND_DESCRIPTION = "Purge/Delete messages in this channel bottom-up, the command is uncounted.";
 
     // Parameters
     public const string AMOUNT_PARAMETER = "amount";
+    public const string COMMAND_NAME_PARAMETER = "command";
     public const string FORM_ID_PARAMETER = "formid";
+    public const string CHANNEL_NAME_PARAMETER = "channelname";
     public const string EMBED_AUTHOR_ICON_URL_PARAMETER = "authoriconurl";
     public const string EMBED_AUTHOR_NAME_PARAMETER = "authorname";
     public const string EMBED_COLOR_PARAMETER = "embedcolor";
@@ -71,10 +86,13 @@ public static class CMD_CONSTANT
     public const string QUESTION_REQUIRED_PARAMETER = "required";
     public const string QUESTION_MIN_PARAMETER = "min";
     public const string QUESTION_MAX_PARAMETER = "max";
+    public const string QUESTION_NUMBER_PARAMETER = "qnum";
 
     // Parameter descriptions
+    public const string HELP_COMMAND_NAME_PARAMETER_DESCRIPTION = "Name the command if you need a specific help.";
     public const string FORM_ID_PARAMETER_DESCRIPTION = "Target form ID that has been made.";
     public const string PURGE_AMOUNT_PARAMETER_DESCRIPTION = "How many messages will be deleted before calling this command. For example: 10";
+    public const string CHANNEL_NAME_PARAMETER_DESCRIPTION = "What is the channel name (channel)? Not the channel (#channel)";
     public const string MESSAGE_ID_PARAMETER_DESCRIPTION = "Target message ID, For Example: 1234567890123456789";
     public const string BUTTON_ID_PARAMETER_DESCRIPTION = "Target button ID, each button has unique ID";
     public const string QUESTION_TEXT_PARAMETER_DESCRIPTION = "The question itself. For example: \"What is your Favourite Music?\"";
@@ -83,4 +101,5 @@ public static class CMD_CONSTANT
     public const string QUESTION_REQUIRED_PARAMETER_DESCRIPTION = "Does user must answer the question?";
     public const string QUESTION_MIN_PARAMETER_DESCRIPTION = "Minimal length of letter that user must input. Default is 1.";
     public const string QUESTION_MAX_PARAMETER_DESCRIPTION = "Maximal length of letter that user can input. Default is 512.";
+    public const string QUESTION_NUMBER_PARAMETER_DESCRIPTION = "Question number, always starts from number 1 to n.";
 }

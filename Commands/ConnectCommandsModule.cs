@@ -1,8 +1,8 @@
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
-using DSharpPlus.SlashCommands;
 using FurmAppDBot.Clients;
 using FurmAppDBot.Databases;
 using FurmAppDBot.Databases.Exceptions;
@@ -15,6 +15,7 @@ public class ConnectCommandsModule: BaseCommandModule
     #region Main
 
     [Command(CMD_CONSTANT.CONNECT_COMMAND_NAME)]
+    [RequirePermissions(Permissions.ManageGuild)]
     public async Task Connect(CommandContext ctx, string messageID, string buttonID, string formID)
     {
         // Initial respond with message handler.
@@ -22,53 +23,46 @@ public class ConnectCommandsModule: BaseCommandModule
         
         try
         {
-            // Search for target message.
-            DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+            try
+            {
+                // Search for target message.
+                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
 
-            // Check if the target message has the button with specific ID, if not then abort.
-            if (!msgFound.IsComponentWithIDExists(buttonID))
-            {
-                await msgHandler.ModifyAsync($"Button with ID `{buttonID}` not found, abort the process.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-                return;
-            }
+                // Check if the target message has the button with specific ID, if not then abort.
+                if (!msgFound.IsComponentWithIDExists(buttonID))
+                {
+                    await msgHandler.ModifyAsync($"Button with ID `{buttonID}` not found, abort the process.\n"
+                        + "This message will be delete automatically in 3 2 1...");
+                    await Task.Delay(3000);
+                    await msgHandler.DeleteAsync();
+                    return;
+                }
 
-            // Set button process
-            await Connect(msgHandler, msgFound, buttonID, formID);
-        }
-        catch (FormatException) // Wrong input format.
-        {
-            try
-            {
-                await msgHandler.ModifyAsync("Bad argument inserted to message ID, insert numbers only.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
+                // Set button process
+                await Connect(msgHandler, msgFound, buttonID, formID);
             }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        }
-        catch (NotFoundException) // When message not found.
-        {
-            try
+            catch (FormatException) // Wrong input format.
             {
-                await msgHandler.ModifyAsync("The message you are looking for does not exists.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("Bad argument inserted to message ID, insert numbers only, abort the process.");
             }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-        }
-        catch (DBClientTimeoutException)
-        {
-            try
+            catch (NotFoundException) // When message not found.
             {
-                // Database connection has timed out, abort the process.
+                // Notify by message handler.
+                await msgHandler.ModifyAsync("The message you are looking for does not exists, abort the process.");
+            }
+            catch (DBClientTimeoutException) // When database connection has timed out.
+            {
+                // Notify by message handler.
                 await msgHandler.ModifyAsync("```Request Time Out, please try again later!```");
             }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
+            catch (FormNotFoundException) // When getting form data failed.
+            {
+                // Notify by message handler.
+                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists, abort the process.");
+            }
         }
+        catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
     #endregion
@@ -77,23 +71,9 @@ public class ConnectCommandsModule: BaseCommandModule
 
     public static async Task Connect(DiscordMessage msgHandler, DiscordMessage targetMsg, string buttonID, string formID)
     {
-        // Check if form with ID does not exists, then abort the process.
-        if (!(await FormInterfaceData.Exists(targetMsg.Channel.Guild.Id, formID)))
-        {
-            try
-            {
-                await msgHandler.ModifyAsync($"Form with ID `{formID}`, abort the process.\n"
-                    + "This message will be delete automatically in 3 2 1...");
-                await Task.Delay(3000);
-                await msgHandler.DeleteAsync();
-            }
-            catch (NotFoundException) { /* Ignore the exception if user already deleted the message handler */ }
-            return;
-        }
-
         // Get button and form information.
-        var btnData = await ButtonInterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.Channel.Id);
-        var formData = await FormInterfaceData.GetData(targetMsg.Channel.Guild.Id, formID);
+        var btnData = await InterfaceData.GetData(targetMsg.Channel.Guild.Id, targetMsg.Channel.Id);
+        var formData = await FormData.GetData(targetMsg.Channel.Guild.Id, formID);
 
         // Finally connect both data.
         await btnData.ConnectElement(formData, $"{targetMsg.Id}", buttonID);
