@@ -41,7 +41,7 @@ public class FormCommandsModule : BaseCommandModule
                 }
 
                 // Selecting the command by name.
-                switch (commandName)
+                switch (commandName.ToLower())
                 {
                     case CMD_CONSTANT.ADD_COMMAND_NAME when !string.IsNullOrEmpty(formID):
                         await Add(msgHandler, formID);
@@ -104,6 +104,7 @@ public class FormCommandsModule : BaseCommandModule
         await msgHandler.ModifyAsync(response);
     }
 
+    // TODO: Get Form detail not working.
     public static async Task Get(DiscordMessage msgHandler, string formID)
     {
         // Intialize initial data.
@@ -232,12 +233,11 @@ public class FormCommandsModule : BaseCommandModule
         // Check if interaction timed out.
         if (pickedBtn.TimedOut) return (string.Empty, "Timeout!");
 
+        // Respond to button interaction.
+        await pickedBtn.Result.Interaction.DeleteOriginalResponseAsync();
+
         // Check if interaction has been canceled.
         if (pickedBtn.Result.Id == "cancel") return (string.Empty, "Cancel deletion process.");
-
-        // Respond to button interaction.
-        await pickedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-        await Task.Delay(100);
 
         // Select and return the form ID value.
         return (docs[int.Parse(pickedBtn.Result.Id.Substring(1)) - 1][DB_CONSTANT.FORM_ID_KEY].AsString, string.Empty);

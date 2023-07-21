@@ -14,6 +14,7 @@ public class ContainerSlashCommandGroup : ApplicationCommandModule
         [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string formID,
         [Option(CMD_CONSTANT.CHANNEL_NAME_PARAMETER, CMD_CONSTANT.CHANNEL_NAME_PARAMETER_DESCRIPTION)]
+        [ChannelTypes]
         string channelName)
     {
         // TODO: Set form container.

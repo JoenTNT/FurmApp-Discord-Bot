@@ -7,7 +7,7 @@ namespace FurmAppDBot.Commands;
 [SlashCommandGroup(CMD_CONSTANT.EMBED_COMMAND_NAME, CMD_CONSTANT.EMBED_COMMAND_DESCRIPTION)]
 public class EmbedSlashCommandGroup : ApplicationCommandModule
 {
-    [SlashCommand(CMD_CONSTANT.CREATE_COMMAND_NAME, CMD_CONSTANT.EMBED_CREATE_DESCRIPTION)]
+    [SlashCommand(CMD_CONSTANT.CREATE_COMMAND_NAME, CMD_CONSTANT.EMBED_CREATE_COMMAND_DESCRIPTION)]
     public async Task Create(InteractionContext ctx,
         [Option(CMD_CONSTANT.EMBED_AUTHOR_ICON_URL_PARAMETER, "Set icon of author part in embed.")]
         string? authorIconUrl = null,
@@ -28,27 +28,27 @@ public class EmbedSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.EMBED_TITLE_PARAMETER, "Set title of embed.")]
         string? title = null)
     {
-        // Delete interaction by default.
+        // Replace interaction with normal message handler instead of slash command.
         await ctx.DeferAsync();
-        var rmHandler = await ctx.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder()
-            .WithContent("Please wait for a moment..."));
+        var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
+        await ctx.DeleteResponseAsync();
 
         // Create embed.
         await EmbedCommandsModule.Create(ctx.Channel, authorIconUrl, authorName, embedColor,
             embedDesc, footerIconUrl, footerText, imageUrl, thumbnailUrl, title);
 
         // Delete message handler.
-        await rmHandler.DeleteAsync();
+        await msgHandler.DeleteAsync();
     }
     
     // TODO: Create an edit command for embed.
-    [SlashCommand(CMD_CONSTANT.EDIT_COMMAND_NAME, CMD_CONSTANT.EMBED_EDIT_DESCRIPTION)]
+    [SlashCommand(CMD_CONSTANT.EDIT_COMMAND_NAME, CMD_CONSTANT.EMBED_EDIT_COMMAND_DESCRIPTION)]
     public async Task Edit(InteractionContext ctx,
-        [Option("MessageID", "Target message ID")]
+        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION)]
         string messageID,
-        [Option("Element", "Target element in that embed.")]
+        [Option(CMD_CONSTANT.ELEMENT_PARATEMER, CMD_CONSTANT.EMBED_ELEMENT_PARAMETER_DESCRIPTION)]
         string element,
-        [Option("Value", "Set value of the element, value may be vary and may not be always work.")]
+        [Option(CMD_CONSTANT.VALUE_PARAMETER, CMD_CONSTANT.EMBED_VALUE_PARAMETER_DESCRIPTION)]
         string value)
     {
         // await ctx.DeleteResponseAsync();

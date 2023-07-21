@@ -16,7 +16,7 @@ public static class CMD_CONSTANT
     public const string PING_COMMAND_NAME = "ping";
     public const string HELP_COMMAND_NAME = "help";
     public const string EMBED_COMMAND_NAME = "embed";
-    // public const string GET_PREFIX_COMMAND_NAME = "getprefix"; // TODO: Prefix Command.
+    public const string PREFIX_COMMAND_NAME = "prefix";
     public const string SETTING_COMMAND_NAME = "setting";
     public const string BUTTON_COMMAND_NAME = "button";
     public const string FORM_COMMAND_NAME = "form";
@@ -33,6 +33,9 @@ public static class CMD_CONSTANT
     public const string SET_COMMAND_NAME = "set";
     public const string SWAP_COMMAND_NAME = "swap";
     public const string CATEGORY_COMMAND_NAME = "chcat";
+    public const string DM_CHANNEL_COMMAND_NAME = "chdm";
+    public const string ENABLE_COMMAND_NAME = "enable";
+    public const string DISABLE_COMMAND_NAME = "disable";
     public const string INFO_COMMAND_NAME = "info";
     internal const string SYNCDB_COMMAND_NAME = "syncdb";
 
@@ -40,8 +43,9 @@ public static class CMD_CONSTANT
     public const string PING_COMMAND_DESCRIPTION = "Replies with Pong!";
     public const string HELP_COMMAND_DESCRIPTION = "Provides a command guide, helps, and quick start.";
     public const string EMBED_COMMAND_DESCRIPTION = "Create Embed Message.";
-    public const string EMBED_CREATE_DESCRIPTION = "Create an embed.";
-    public const string EMBED_EDIT_DESCRIPTION = "Edit one element of embed.";
+    public const string EMBED_CREATE_COMMAND_DESCRIPTION = "Create an embed.";
+    public const string EMBED_EDIT_COMMAND_DESCRIPTION = "Edit one element of embed.";
+    public const string PREFIX_COMMAND_DESCRIPTION = "Prefix settings for this server.";
     public const string SETTING_COMMAND_DESCRIPTION = "Server scope settings";
     public const string BUTTON_COMMAND_DESCRIPTION = "Modifying button interface on target message.";
     public const string FORM_COMMAND_DESCRIPTION = "Utilizing form modal to make a survey utility.";
@@ -60,7 +64,7 @@ public static class CMD_CONSTANT
     public const string QUESTION_ADD_COMMAND_DESCRIPTION = "Add question to target form.";
     public const string QUESTION_DELETE_COMMAND_DESCRIPTION = "Delete question from target form.";
     public const string QUESTION_EDIT_COMMAND_DESCRIPTION = "Edit question from targetr form.";
-    public const string SETTING_CATEGORY_COMMAND_DESCRIPTION = "Setting channel category as a submission container.";
+    public const string SETTING_CATEGORY_COMMAND_DESCRIPTION = "This command will set channel category as a submission container.";
     public const string SETTING_INFO_COMMAND_DESCRIPTION = "Check server scope settings information.";
     public const string PURGE_COMMAND_DESCRIPTION = "Purge/Delete messages in this channel bottom-up, the command is uncounted.";
 
@@ -78,8 +82,11 @@ public static class CMD_CONSTANT
     public const string EMBED_IMAGE_URL_PARAMETER = "imageurl";
     public const string EMBED_THUMBNAIL_URL_PARAMETER = "thumbnailurl";
     public const string EMBED_TITLE_PARAMETER = "title";
+    public const string ELEMENT_PARATEMER = "element";
+    public const string VALUE_PARAMETER = "value";
     public const string MESSAGE_ID_PARAMETER = "messageid";
     public const string BUTTON_ID_PARAMETER = "buttonid";
+    public const string CHANNEL_CATEGORY_ID_PARAMETER = "chcatid";
     public const string QUESTION_TEXT_PARAMETER = "question";
     public const string QUESTION_INPUT_STYLE_PARAMETER = "style";
     public const string QUESTION_PLACEHOLDER_PARAMETER = "placeholder";
@@ -95,6 +102,9 @@ public static class CMD_CONSTANT
     public const string CHANNEL_NAME_PARAMETER_DESCRIPTION = "What is the channel name (channel)? Not the channel (#channel)";
     public const string MESSAGE_ID_PARAMETER_DESCRIPTION = "Target message ID, For Example: 1234567890123456789";
     public const string BUTTON_ID_PARAMETER_DESCRIPTION = "Target button ID, each button has unique ID";
+    public const string CHANNEL_CATEGORY_ID_PARAMETER_DESCRIPTION = "Insert channel category ID, For Example: 1234567890123456789";
+    public const string EMBED_ELEMENT_PARAMETER_DESCRIPTION = "Target element in that embed.";
+    public const string EMBED_VALUE_PARAMETER_DESCRIPTION = "Set value of the element, value may be vary and may not always work.";
     public const string QUESTION_TEXT_PARAMETER_DESCRIPTION = "The question itself. For example: \"What is your Favourite Music?\"";
     public const string QUESTION_PLACEHOLDER_PARAMETER_DESCRIPTION = "A hint to help user answering a question. For example: \"Insert Genre or Song Title here...\"";
     public const string QUESTION_STYLE_PARAMETER_DESCRIPTION = "Input field style, paragraph or short?";

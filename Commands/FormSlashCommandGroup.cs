@@ -19,14 +19,16 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION)]
         string formID)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {
@@ -49,14 +51,16 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string formID)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {
@@ -84,14 +88,16 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string? formID = null)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {
@@ -116,14 +122,16 @@ public class FormSlashCommandGroup : ApplicationCommandModule
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task GetAll(InteractionContext ctx)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {
@@ -149,16 +157,6 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         try
         {
             InteractivityExtension interactivity = ctx.Client.GetInteractivity();
-
-            // var actionRows = new DiscordActionRowComponent(new DiscordComponent[] {
-            //     new TextInputComponent("This is Part A", "input_1", max_length: 64)
-            //     {
-            //         Placeholder = "Write anything you like...",
-            //         Style = TextInputStyle.Short,
-            //         Required = true,
-            //     },
-            // });
-
             var modalID = "sample_modal";
             DiscordInteractionResponseBuilder modal = new DiscordInteractionResponseBuilder()
                 .WithTitle("This is a Sample Modal")
@@ -181,9 +179,15 @@ public class FormSlashCommandGroup : ApplicationCommandModule
                 );
             
             await ctx.CreateResponseAsync(InteractionResponseType.Modal, modal);
-            var submittedModal = await interactivity.WaitForModalAsync(modalID, ctx.User, TimeSpan.MaxValue);
+            var submittedModal = await interactivity.WaitForModalAsync(modalID, ctx.User,
+                TimeSpan.FromSeconds(CONSTANT.FILLING_FORM_IN_SECONDS_DEFAULT_TIMEOUT));
 
-            if (submittedModal.TimedOut) return;
+            if (submittedModal.TimedOut)
+            {
+                await submittedModal.Result.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("TIMEOUT!"));
+                return;
+            }
 
             await submittedModal.Result.Interaction.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,

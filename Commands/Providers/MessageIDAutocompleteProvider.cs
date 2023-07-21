@@ -11,7 +11,10 @@ public class MessageIDAutocompleteProvider : IAutocompleteProvider
 {
     #region ChoiceProvider
 
-    public Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx) => GetAllMessageID(ctx.Channel);
+    public Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx)
+    {
+        return GetAllMessageID(ctx.Channel);
+    }
 
     #endregion
 
@@ -19,22 +22,26 @@ public class MessageIDAutocompleteProvider : IAutocompleteProvider
 
     private async Task<IEnumerable<DiscordAutoCompleteChoice>> GetAllMessageID(DiscordChannel channel)
     {
+        // Receive database instance.
+        MainDatabase db = MainDatabase.Instance;
+
         // Declare list of hint.
         List<DiscordAutoCompleteChoice> choices = new();
 
         try
         {
             // Receive message informations from database.
-            await MainDatabase.Instance.HandleDBProcess(async () => {
+            await db.HandleDBProcess(async () => {
                 // Get collection from database.
-                var collection = await MainDatabase.Instance.InitCollection(channel.Guild.Id, DB_CONSTANT.INTERFACE_DATABASE_NAME);
+                var collection = await db.InitCollection(channel.Guild.Id, DB_CONSTANT.INTERFACE_DATABASE_NAME);
 
                 // Filtering by limiting results.
                 var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.CHANNEL_ID_KEY, $"{channel.Id}");
-                var docs = await collection.Find(filter).ToListAsync();
+                var projection = Builders<BsonDocument>.Projection.Include(DB_CONSTANT.MESSAGE_ID_KEY);
+                var docs = await collection.Find(filter).Project(projection).ToListAsync();
 
                 // Check if not exists, return empty.
-                if (docs.Count == 0) return;
+                if (docs.Count <= 0) return;
 
                 // Collecting it to list.
                 foreach (var nm in docs[0][DB_CONSTANT.MESSAGE_ID_KEY].AsBsonDocument.Names)

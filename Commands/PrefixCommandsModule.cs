@@ -1,5 +1,6 @@
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 
@@ -8,6 +9,12 @@ namespace FurmAppDBot.Commands;
 // TODO: Prefix Command.
 public class PrefixCommandsModule : BaseCommandModule
 {
+    [Command(CMD_CONSTANT.PREFIX_COMMAND_NAME)]
+    public async Task Prefix(CommandContext ctx, string commandName, params string[] inputs)
+    {
+
+    }
+    
     // public static async Task GetPrefix(InteractionContext ctx)
     // {
     //     var content = $"The Prefix of this Server is \"{CONSTANT.DEFAULT_PREFIX}\"";

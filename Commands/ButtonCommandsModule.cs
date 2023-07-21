@@ -167,10 +167,7 @@ public class ButtonCommandsModule : BaseCommandModule
             Task result = await Task.WhenAny(waiter, cancellationTask);
 
             if (waiter.Id == result.Id)
-            {
-                await waiter.Result.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-                await Task.Delay(100);
-            }
+                await waiter.Result.Result.Interaction.DeleteOriginalResponseAsync();
 
             return waiter.Id == result.Id ? waiter.Result : null;
         }
@@ -242,8 +239,7 @@ public class ButtonCommandsModule : BaseCommandModule
         };
 
         // Finish button respond process
-        await pickButton.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-        await Task.Delay(100);
+        await pickButton.Result.Interaction.DeleteOriginalResponseAsync();
 
         // Edit message to Button Text input content
         msgBuilder = new DiscordMessageBuilder(msgHandler);
@@ -381,10 +377,40 @@ public class ButtonCommandsModule : BaseCommandModule
             return;
         }
 
-        // Final touch, edit the target message
+        // Rebuild message and its components.
         var modifiedTargetMsg = new DiscordMessageBuilder(targetMsg);
-        modifiedTargetMsg.AddComponents(new DiscordButtonComponent(btnStyle, btnID, btnText,
-            emoji: btnIcon == null ? null : new DiscordComponentEmoji(btnIcon)));
+        var newBtn = new DiscordButtonComponent(btnStyle, btnID, btnText, emoji: btnIcon == null ? null : new DiscordComponentEmoji(btnIcon));
+        List<List<DiscordComponent>> comps = new();
+        DiscordActionRowComponent[] msgComps = targetMsg.Components.ToArray();
+        bool isBtnAdded = false;
+        for (int i = 0; i < msgComps.Length; i++)
+        {
+            // Access one element at a time.
+            var rowComp = msgComps[i];
+            if (rowComp.Components.Any(c => c is DiscordButtonComponent) && !isBtnAdded)
+            {
+                comps.Add(new());
+                comps[i].AddRange(rowComp.Components);
+
+                // Check for maximal button in one row (Max 5), then create new row.
+                if (comps[i].Count >= 5) comps.Add(new() { newBtn });
+                else comps[i].Add(newBtn);
+                isBtnAdded = true;
+                continue;
+            }
+
+            // Other components automatically added.
+            comps.Add(new(rowComp.Components));
+        }
+
+        // Check if button not yet added, then add it as the first button.
+        if (!isBtnAdded)
+            comps.Add(new() { newBtn });
+
+        // Added all components back to the message.
+        modifiedTargetMsg.ClearComponents();
+        foreach (var comp in comps)
+            modifiedTargetMsg.AddComponents(comp.ToArray());
 
         // Saving to database.
         InterfaceData buttonInterfaceData;
@@ -423,10 +449,9 @@ public class ButtonCommandsModule : BaseCommandModule
         // Get all button from message.
         List<DiscordButtonComponent> btns = new();
         foreach (var comp in targetMsg.Components)
-        {
-            foreach (var btn in comp.Components.OfType<DiscordButtonComponent>())
-                btns.Add(btn);
-        }
+            foreach (var c in comp.Components)
+                if (c is DiscordButtonComponent)
+                    btns.Add((DiscordButtonComponent)c);
 
         // Check if there's no button in the target message.
         if (btns.Count == 0)
@@ -463,20 +488,19 @@ public class ButtonCommandsModule : BaseCommandModule
             {
                 // Set unregistered information.
                 embed.Description += $"Form: `UNASSIGNED`)\n";
+                continue;
             }
-            else
+            
+            // Check if form information not exists.
+            d = temp.GetButtons($"{targetMsg.Id}");
+            if (d == null || !d.ContainsKey(btns[i].CustomId) || string.IsNullOrEmpty(d[btns[i].CustomId]))
             {
-                // Check if form information not exists.
-                d = temp.GetButtons($"{targetMsg.Id}");
-                if (d == null || !d.ContainsKey(btns[i].CustomId) || string.IsNullOrEmpty(d[btns[i].CustomId]))
-                {
-                    embed.Description += $"Form: `UNASSIGNED`)\n";
-                    return;
-                }
-                
-                // Get from information.
-                embed.Description += $"Form: `{d[btns[i].CustomId]}`)\n";
+                embed.Description += $"Form: `UNASSIGNED`)\n";
+                continue;
             }
+            
+            // Get from information.
+            embed.Description += $"Form: `{d[btns[i].CustomId]}`)\n";
         }
 
         // Summarize information, create the message handler.
@@ -485,7 +509,7 @@ public class ButtonCommandsModule : BaseCommandModule
             + $"There are {btns.Count} Buttons, these are the information "
             + $"(keep the information only for Admin and Mods):\n\n"
             + $"{embed.Description}";
-        msgBuilder.AddEmbed(embed);
+        msgBuilder.Embed = embed;
 
         // Send information message by editing message handler.
         await msgHandler.ModifyAsync(msgBuilder);
@@ -516,8 +540,7 @@ public class ButtonCommandsModule : BaseCommandModule
         if (pickedBtn.TimedOut) return string.Empty;
 
         // Set finish the button responded by user.
-        await pickedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-        await Task.Delay(100);
+        await pickedBtn.Result.Interaction.DeleteOriginalResponseAsync();
 
         // Return the result with custom ID of that button.
         return pickedBtn.Result.Id;

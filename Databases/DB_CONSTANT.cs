@@ -8,14 +8,14 @@ public static class DB_CONSTANT
     public const string FORM_DATABASE_NAME = "form";
     public const string SUBMISSION_DATABASE_NAME = "submission";
     public const string BACKUP_DATABASE_NAME = "backup";
-    public const string CONFIG_DATABASE_NAME = "config";
+    public const string SETTING_DATABASE_NAME = "setting";
     
     public const string CHANNEL_ID_KEY = "channelID";
     public const string MESSAGE_ID_KEY = "messageID";
     public const string BUTTONS_KEY = "buttons";
     public const string FORM_ID_KEY = "formID";
     public const string FORM_QUESTIONS_KEY = "questions";
-    public const string CHANNEL_CATEGORY_AS_CONTAINER_KEY = "cc";
+    public const string CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY = "cc";
 
     public const string QUESTION_KEY = "q";
     public const string QUESTION_STYLE_KEY = "style";

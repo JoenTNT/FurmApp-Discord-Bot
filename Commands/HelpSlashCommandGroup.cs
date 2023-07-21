@@ -12,14 +12,16 @@ public class HelpSlashCommandGroup : ApplicationCommandModule
         [ChoiceProvider(typeof(CommandNameChoiceProvider))]
         string? commandName = null)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Intialize message handler.
         var msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             // Set initial command name to main if user didn't input any.
             if (string.IsNullOrEmpty(commandName)) commandName = HelpCommandsModule.MAIN_HELP_PAGE_KEY;

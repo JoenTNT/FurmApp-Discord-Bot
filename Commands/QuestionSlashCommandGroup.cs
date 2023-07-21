@@ -33,14 +33,16 @@ public class QuestionSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.QUESTION_MAX_PARAMETER, CMD_CONSTANT.QUESTION_MAX_PARAMETER_DESCRIPTION)]
         string? max = null)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {
@@ -77,14 +79,16 @@ public class QuestionSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.QUESTION_NUMBER_PARAMETER, CMD_CONSTANT.QUESTION_NUMBER_PARAMETER_DESCRIPTION)]
         string questionNum)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             // Parsing input to question number.
             try
@@ -122,6 +126,7 @@ public class QuestionSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION, true)]
         [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string formID,
+        [Option(CMD_CONSTANT.QUESTION_NUMBER_PARAMETER, CMD_CONSTANT.QUESTION_NUMBER_PARAMETER_DESCRIPTION)]
         string questionNum,
         [Option(CMD_CONSTANT.QUESTION_TEXT_PARAMETER, CMD_CONSTANT.QUESTION_TEXT_PARAMETER_DESCRIPTION)]
         string? question = null,
@@ -140,14 +145,16 @@ public class QuestionSlashCommandGroup : ApplicationCommandModule
         [Option(CMD_CONSTANT.QUESTION_MAX_PARAMETER, CMD_CONSTANT.QUESTION_MAX_PARAMETER_DESCRIPTION)]
         string? max = null)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {

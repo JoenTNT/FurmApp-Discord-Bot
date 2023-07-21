@@ -14,22 +14,26 @@ public class ConnectSlashCommandGroup : ApplicationCommandModule
     [SlashCommand(CMD_CONSTANT.BUTTON_COMMAND_NAME, CMD_CONSTANT.BUTTON_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task ButtonForm(InteractionContext ctx,
-        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION)]
+        [Option(CMD_CONSTANT.MESSAGE_ID_PARAMETER, CMD_CONSTANT.MESSAGE_ID_PARAMETER_DESCRIPTION, true)]
+        [Autocomplete(typeof(MessageIDAutocompleteProvider))]
         string messageID,
-        [Option(CMD_CONSTANT.BUTTON_ID_PARAMETER, CMD_CONSTANT.BUTTON_ID_PARAMETER_DESCRIPTION)]
+        [Option(CMD_CONSTANT.BUTTON_ID_PARAMETER, CMD_CONSTANT.BUTTON_ID_PARAMETER_DESCRIPTION, true)]
+        [Autocomplete(typeof(ButtonIDAutocompleteProvider))]
         string buttonID,
         [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION, true)]
         [Autocomplete(typeof(FormIDAutocompleteProvider))]
         string formID)
     {
+        // Deferring interaction.
+        await ctx.DeferAsync();
+
         // Initial respond with message handler.
         DiscordMessage msgHandler = await ctx.Channel.SendMessageAsync("Please wait for a moment...");
 
         try
         {
-            // Proceed the slash command process.
-            await ctx.DeferAsync();
-            await ctx.Interaction.DeleteOriginalResponseAsync();
+            // Delete slash command interaction.
+            await ctx.DeleteResponseAsync();
 
             try
             {

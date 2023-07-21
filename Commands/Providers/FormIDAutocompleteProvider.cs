@@ -10,7 +10,10 @@ public class FormIDAutocompleteProvider : IAutocompleteProvider
 {
     #region ChoiceProvider
 
-    public Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx) => GetAllForms(ctx.Guild);
+    public Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx)
+    {
+        return GetAllForms(ctx.Guild);
+    }
 
     #endregion
 

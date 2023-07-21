@@ -5,6 +5,7 @@ using DSharpPlus.SlashCommands;
 
 namespace FurmAppDBot.Commands;
 
+// TODO: Follow the template.
 public static class PingCommand
 {
     public static async Task Ping(InteractionContext ctx)

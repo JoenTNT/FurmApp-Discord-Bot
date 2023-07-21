@@ -2,6 +2,7 @@ using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using DSharpPlus.Exceptions;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Enums;
 using DSharpPlus.Interactivity.Extensions;
@@ -174,6 +175,7 @@ public class Worker : BackgroundService
 
     private async Task ClientMessageCreatedCallback(DiscordClient client, MessageCreateEventArgs args)
     {
+        // If mentioning the bot clien, then send starter help message.
         if (args.MentionedUsers.Contains(client.CurrentUser))
         {
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder()
@@ -221,10 +223,10 @@ public class Worker : BackgroundService
     private async Task ClientComponentInteractionCreatedCallback(DiscordClient client, ComponentInteractionCreateEventArgs args)
     {
         // Check if interaction is button interaction.
-        if (args.Interaction.Data.ComponentType == ComponentType.Button)
+        if (args.Interaction.Data.ComponentType == ComponentType.Button && args.Id != "PROCEED!")
         {
             // Start interaction.
-            await args.Interaction.DeferAsync();
+            await args.Interaction.DeferAsync(true);
 
             // Check if interface is registered before sending Modal.
             InterfaceData data;
@@ -239,19 +241,132 @@ public class Worker : BackgroundService
             try { form = await FormData.GetData(args.Guild.Id, buttons[args.Id]); }
             catch (FormNotFoundException) { return; } /* Ignore Interaction. */
 
-            // Start interaction.
-            await args.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-            await Task.Delay(100);
-
             // Check if form has no question, send information to user to report this issue.
             if (form.QuestionCount <= 0)
             {
-                // TODO: Send info to user to report issue.
+                await args.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder {
+                    Content = "Something went wrong with the form. Please report this issue to Admin/Moderator.",
+                });
+                return;
+            }
+
+            // Notify form fulfilment.
+            var notifier = new DiscordWebhookBuilder().WithContent(
+                $"The Form is From => https://discord.com/channels/{args.Guild.Id}/{args.Channel.Id}/{args.Message.Id}\n"
+                + "Form is Ready! Press the Button Below to start filling.");
+            notifier.AddComponents(new DiscordButtonComponent(ButtonStyle.Primary, "PROCEED!", "Start"));
+            var msgHandler = await args.Interaction.EditOriginalResponseAsync(notifier);
+
+            // Wait for start filling.
+            var proceedBtn = await client.GetInteractivity().WaitForButtonAsync(msgHandler, args.User,
+                TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
+            
+            // Check timeout, then abort the process.
+            if (proceedBtn.TimedOut)
+            {
+                try { await args.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Timeout!")); }
+                catch (NotFoundException) { return; } /* Ignore Interaction. */
                 return;
             }
             
-            // Start Modal filling by user.
-            // TODO: Create modal for user to fill in.
+            // Build and start Modal filling by user.
+            DiscordInteractionResponseBuilder modal;
+            Dictionary<string, string> answers = new();
+            int questionRevealCount = 0, modalPage = 1;
+            InteractivityResult<ModalSubmitEventArgs>? submit = null;
+            do {
+                // Create modal.
+                modal = new DiscordInteractionResponseBuilder()
+                    .WithTitle("Fill the Form!")
+                    .WithCustomId(form.FormID);
+
+                // Reveal 5 questions for each modal.
+                for (int i = (modalPage - 1) * 5; i < modalPage * 5; i++)
+                {
+                    if (i < form.QuestionCount) modal.AddComponents(form[i]);
+                    else break;
+                }
+                
+                // Check first submission.
+                if (submit == null)
+                {
+                    // Start filling modal and get submissions from it.
+                    await proceedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+                }
+                else
+                {
+                    // Start filling modal and get submissions from it.
+                    await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+                }
+
+                submit = await client.GetInteractivity().WaitForModalAsync(form.FormID, args.User,
+                    TimeSpan.FromSeconds(CONSTANT.FILLING_FORM_IN_SECONDS_DEFAULT_TIMEOUT));
+                
+                // Check timeout or cancelled.
+                if (submit.Value.TimedOut)
+                {
+                    // Notify cancellation or timeout.
+                    try { await msgHandler.DeleteAsync(); }
+                    catch (NotFoundException) { /* Ignore Interaction */ }
+                    return;
+                }
+
+                // Put submissions to temporary list of data.
+                foreach (var ans in submit.Value.Result.Values)
+                    answers.Add(ans.Key, ans.Value);
+
+                // Next question reveal.
+                questionRevealCount += 5;
+                modalPage++;
+            } while (questionRevealCount < form.QuestionCount);
+
+            // Interaction to last submission.
+            var msgResult = new DiscordInteractionResponseBuilder().WithContent("Processing...");
+            msgResult.AsEphemeral();
+            await proceedBtn.Result.Interaction.DeleteOriginalResponseAsync();
+            await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, msgResult);
+            msgHandler = await submit.Value.Result.Interaction.GetOriginalResponseAsync();
+
+            // Get channel category as container of submission.
+            ulong ccID = await SettingCommandsModule.GetChannelCategory(await args.Guild.GetMemberAsync(client.CurrentUser.Id), args.Guild);
+            DiscordChannel channelCat = args.Guild.GetChannel(ccID);
+
+            // Check if channel for specific form ID submission not yet created.
+            DiscordChannel? formSubmissionChannel = args.Guild.Channels.FirstOrDefault(c => c.Value.Name == form.ChannelName).Value;
+            if (formSubmissionChannel == null)
+            {
+                // Create submission channel.
+                formSubmissionChannel = await args.Guild.CreateChannelAsync(form.ChannelName, ChannelType.Text, channelCat);
+
+                // Making sure the bot has permission to send message to channel.
+                await formSubmissionChannel.AddOverwriteAsync(await args.Guild.GetMemberAsync(client.CurrentUser.Id),
+                    Permissions.AccessChannels | Permissions.ReadMessageHistory);
+                
+                // Don't let anyone see this channel.
+                await formSubmissionChannel.AddOverwriteAsync(args.Guild.EveryoneRole, Permissions.None, Permissions.AccessChannels);
+            }
+
+            // Send to target channel.
+            DiscordMessageBuilder msgBuilder = new DiscordMessageBuilder()
+                .WithContent($"Submitted by {args.User.Mention}");
+            DiscordEmbedBuilder embed = new DiscordEmbedBuilder {
+                Title = $"Submission [Form with ID: {form.FormID}] by {args.User.Username}",
+                Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
+            };
+            TextInputComponent question;
+            for (int i = 0; i < form.QuestionCount; i++)
+            {
+                question = form[i];
+                embed.AddField($"**{question.Label}**", $"{answers[question.CustomId]}", true);
+            }
+
+            // Send message to submission channel.
+            msgBuilder.Embed = embed;
+            await formSubmissionChannel.SendMessageAsync(msgBuilder);
+
+            // Send notification to user.
+            try { await msgHandler.ModifyAsync("Your submission has been sent."); }
+            catch (NotFoundException) { /* Ignore if message handler has been deleted. */ }
         }
     }
 

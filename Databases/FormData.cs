@@ -116,6 +116,18 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
             // Check if document not found
             if (documentFound.Count == 0) return;
 
+            // Set channel name.
+            BsonValue channelElement;
+            if (documentFound[0].TryGetValue(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, out channelElement))
+            {
+                // Set channel name if exists.
+                _channelName = channelElement.AsString;
+            }
+
+            // Insert default channel name to database.
+            await collection.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, _formID),
+                Builders<BsonDocument>.Update.Set(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, ChannelName));
+            
             // Clear old data
             _questions.Clear();
 
@@ -152,6 +164,8 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
 
             // Get data document from database with filter
             var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, _formID);
+            var updateQ = Builders<BsonDocument>.Update.Set(DB_CONSTANT.FORM_QUESTIONS_KEY, _questions);
+            var updateC = Builders<BsonDocument>.Update.Set(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, ChannelName);
             var documentFound = await collection.Find(filter).ToListAsync();
 
             // Check unique data which don't exists in database.
@@ -159,12 +173,14 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
             {
                 await collection.InsertOneAsync(new BsonDocument {
                     { DB_CONSTANT.FORM_ID_KEY, $"{_formID}" },
+                    { DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, ChannelName },
                     { DB_CONSTANT.FORM_QUESTIONS_KEY, new BsonArray() },
                 });
             }
 
             // Update questions data.
-            await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set(DB_CONSTANT.FORM_QUESTIONS_KEY, _questions));
+            await collection.UpdateOneAsync(filter, updateQ);
+            await collection.UpdateOneAsync(filter, updateC);
         });
 
         return true;

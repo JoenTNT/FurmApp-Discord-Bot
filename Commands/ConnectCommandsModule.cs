@@ -16,7 +16,7 @@ public class ConnectCommandsModule: BaseCommandModule
 
     [Command(CMD_CONSTANT.CONNECT_COMMAND_NAME)]
     [RequirePermissions(Permissions.ManageGuild)]
-    public async Task Connect(CommandContext ctx, string messageID, string buttonID, string formID)
+    public async Task Connect(CommandContext ctx, string componentName, string messageID, string buttonID, string formID)
     {
         // Initial respond with message handler.
         var msgHandler = await ctx.Message.RespondAsync("Please wait for a moment...");
@@ -25,6 +25,7 @@ public class ConnectCommandsModule: BaseCommandModule
         {
             try
             {
+                // TODO: Check component target.
                 // Search for target message.
                 DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
 

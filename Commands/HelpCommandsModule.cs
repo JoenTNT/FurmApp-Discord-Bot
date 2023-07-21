@@ -157,8 +157,7 @@ public class HelpCommandsModule : BaseCommandModule
         if (pickBtn.TimedOut) return null;
 
         // Respond the button.
-        await pickBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-        await Task.Delay(100);
+        await pickBtn.Result.Interaction.DeleteOriginalResponseAsync();
 
         // Return command name to change page.
         return pickBtn.Result.Id;
@@ -195,8 +194,7 @@ public class HelpCommandsModule : BaseCommandModule
         if (pickBtn.TimedOut) return null;
 
         // Respond the button.
-        await pickBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
-        await Task.Delay(100);
+        await pickBtn.Result.Interaction.DeleteOriginalResponseAsync();
 
         // Return command name to change page.
         return pickBtn.Result.Id;

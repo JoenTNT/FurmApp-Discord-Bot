@@ -5,6 +5,7 @@ using DSharpPlus.SlashCommands;
 
 namespace FurmAppDBot.Commands;
 
+// TODO: Follow the template.
 public static class PurgeCommand
 {
     public static async Task Purge(InteractionContext ctx, string purgeAmount)
