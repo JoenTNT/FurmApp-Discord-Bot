@@ -167,7 +167,7 @@ public class ButtonCommandsModule : BaseCommandModule
             Task result = await Task.WhenAny(waiter, cancellationTask);
 
             if (waiter.Id == result.Id)
-                await waiter.Result.Result.Interaction.DeleteOriginalResponseAsync();
+                await waiter.Result.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
             return waiter.Id == result.Id ? waiter.Result : null;
         }
@@ -210,8 +210,7 @@ public class ButtonCommandsModule : BaseCommandModule
 
         // Start with picking Button Style
         msgHandler = await msgHandler.ModifyAsync(msgBuilder);
-        var pickButton = await interactivity.WaitForButtonAsync(msgHandler, user,
-            TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
+        var pickButton = await interactivity.WaitForButtonAsync(msgHandler, user, TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
 
         // Timeout response if user didn't pick any button style
         if (pickButton.TimedOut)
@@ -239,7 +238,7 @@ public class ButtonCommandsModule : BaseCommandModule
         };
 
         // Finish button respond process
-        await pickButton.Result.Interaction.DeleteOriginalResponseAsync();
+        await pickButton.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
         // Edit message to Button Text input content
         msgBuilder = new DiscordMessageBuilder(msgHandler);
@@ -449,9 +448,7 @@ public class ButtonCommandsModule : BaseCommandModule
         // Get all button from message.
         List<DiscordButtonComponent> btns = new();
         foreach (var comp in targetMsg.Components)
-            foreach (var c in comp.Components)
-                if (c is DiscordButtonComponent)
-                    btns.Add((DiscordButtonComponent)c);
+            btns.AddRange(comp.Components.OfType<DiscordButtonComponent>());
 
         // Check if there's no button in the target message.
         if (btns.Count == 0)
@@ -540,7 +537,7 @@ public class ButtonCommandsModule : BaseCommandModule
         if (pickedBtn.TimedOut) return string.Empty;
 
         // Set finish the button responded by user.
-        await pickedBtn.Result.Interaction.DeleteOriginalResponseAsync();
+        await pickedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
         // Return the result with custom ID of that button.
         return pickedBtn.Result.Id;

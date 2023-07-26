@@ -52,7 +52,8 @@ public class Worker : BackgroundService
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting the bot...");
+        // Notify to console.
+        _logger.LogInformation("[DEBUG] Starting the bot...");
 
         // Client configuration
         _clientConfig = new DiscordConfiguration()
@@ -62,6 +63,7 @@ public class Worker : BackgroundService
             Intents = DiscordIntents.All | DiscordIntents.AllUnprivileged,
         };
 
+        // Create new client.
         _client = new DiscordClient(_clientConfig);
 
         // Client event handlers
@@ -69,26 +71,22 @@ public class Worker : BackgroundService
         _client.MessageCreated += ClientMessageCreatedCallback;
         _client.GuildCreated += ClientGuildCreatedCallback;
         _client.GuildDeleted += ClientGuildDeletedCallback;
-        // _client.InteractionCreated += ClientInteractionCreatedCallback; // TODO: Other interaction case.
         _client.ComponentInteractionCreated += ClientComponentInteractionCreatedCallback;
+        _client.ModalSubmitted += ClientModalSubmittedCallback;
 
         // Interactivity configuration
-        _interactivityConfig = new InteractivityConfiguration()
-        {
-            Timeout = TimeSpan.FromMinutes(1d),
-        };
-
+        _interactivityConfig = new InteractivityConfiguration() { Timeout = TimeSpan.FromMinutes(1d), };
         _client.UseInteractivity(_interactivityConfig);
 
-        // Extension configuration
+        // Extension configuration for commands next.
         _commandExtensionConfig = new CommandsNextConfiguration()
         {
             StringPrefixes = new[] { CONSTANT.DEFAULT_PREFIX },
             EnableDefaultHelp = false,
         };
 
+        // Register commands.
         _commandExtension = _client.UseCommandsNext(_commandExtensionConfig);
-        _commandExtension.RegisterCommands<CommandNextFunctions>();
         _commandExtension.RegisterCommands<HelpCommandsModule>();
         _commandExtension.RegisterCommands<ButtonCommandsModule>();
         _commandExtension.RegisterCommands<ConnectCommandsModule>();
@@ -97,11 +95,14 @@ public class Worker : BackgroundService
         _commandExtension.RegisterCommands<QuestionCommandsModule>();
         _commandExtension.RegisterCommands<ContainerCommandsModule>();
         _commandExtension.RegisterCommands<SettingCommandsModule>();
+        _commandExtension.RegisterCommands<PingCommandsModule>();
+        _commandExtension.RegisterCommands<PurgeCommandsModule>();
 
+        // Extension configuration for slash commands.
         _slashExtensionConfig = new SlashCommandsConfiguration();
 
+        // Register commands.
         _slashExtension = _client.UseSlashCommands(_slashExtensionConfig);
-        _slashExtension.RegisterCommands<SlashCommandFunctions>();
         _slashExtension.RegisterCommands<HelpSlashCommandGroup>();
         _slashExtension.RegisterCommands<ButtonSlashCommandGroup>();
         _slashExtension.RegisterCommands<ConnectSlashCommandGroup>();
@@ -110,15 +111,13 @@ public class Worker : BackgroundService
         _slashExtension.RegisterCommands<QuestionSlashCommandGroup>();
         _slashExtension.RegisterCommands<ContainerSlashCommandGroup>();
         _slashExtension.RegisterCommands<SettingSlashCommandGroup>();
+        _slashExtension.RegisterCommands<PingSlashCommandGroup>();
+        _slashExtension.RegisterCommands<PurgeSlashCommandGroup>();
 
-        // Initialize singletons
+        // Initialize singletons, like client and database.
         FurmAppClient.Init(_client, _logger, _config);
-        try
-        {
-            await MainDatabase.Init(_logger, _config);
-        }
-        catch (DBClientTimeoutException)
-        {
+        try { await MainDatabase.Init(_logger, _config); }
+        catch (DBClientTimeoutException) {
             _logger.LogInformation("[DEBUG] Failed to connect to the database, try again later!");
         }
 
@@ -142,19 +141,21 @@ public class Worker : BackgroundService
 
     private async Task StatusElapse(DiscordClient client, int everyMiliseconds, CancellationToken cancelToken)
     {
+        // Info creation inner functions.
         DiscordActivity GetBotPrefix() => new DiscordActivity($"My Prefix: {CONSTANT.DEFAULT_PREFIX}", ActivityType.ListeningTo);
         DiscordActivity GetServerCount() => new DiscordActivity($"{client.Guilds.Count} Servers", ActivityType.Watching);
 
         try
         {
+            // Waiting for client to connect to the server.
             while (!_isClientConnected)
                 await Task.Delay(everyMiliseconds, cancelToken);
 
+            // Infinite loop through all status.
             int index = 0;
             List<Func<DiscordActivity>> statusFunc = new List<Func<DiscordActivity>> { GetBotPrefix, GetServerCount };
             while (!cancelToken.IsCancellationRequested)
             {
-                //_logger.LogInformation("[DEBUG] Updating status...");
                 await client.UpdateStatusAsync(statusFunc[index](), UserStatus.Online);
                 await Task.Delay(everyMiliseconds, cancelToken);
                 index = index + 1 >= statusFunc.Count ? 0 : index + 1;
@@ -206,28 +207,11 @@ public class Worker : BackgroundService
         await Task.CompletedTask;
     }
 
-    // TODO: Other interaction case.
-    // private async Task ClientInteractionCreatedCallback(DiscordClient client, InteractionCreateEventArgs args)
-    // {
-    //     // Check if interaction component was called by user.
-    //     if (args.Interaction.Type == InteractionType.Component)
-    //     {
-    //         // Check interaction is from button component.
-            
-    //         _logger.LogInformation($"Interact with Component: {args.Interaction.Id}");
-    //     }
-
-    //     await Task.CompletedTask;
-    // }
-
     private async Task ClientComponentInteractionCreatedCallback(DiscordClient client, ComponentInteractionCreateEventArgs args)
     {
         // Check if interaction is button interaction.
-        if (args.Interaction.Data.ComponentType == ComponentType.Button && args.Id != "PROCEED!")
+        if (args.Interaction.Data.ComponentType == ComponentType.Button)
         {
-            // Start interaction.
-            await args.Interaction.DeferAsync(true);
-
             // Check if interface is registered before sending Modal.
             InterfaceData data;
             try { data = await InterfaceData.GetData(args.Guild.Id, args.Channel.Id); }
@@ -236,10 +220,14 @@ public class Worker : BackgroundService
             // Check if form is registered before sending Modal, if not exists then ignore it.
             var buttons = data.GetButtons($"{args.Message.Id}");
             if (buttons == null) return;
+            if (!buttons.ContainsKey(args.Id)) return;
             if (string.IsNullOrEmpty(buttons[args.Id])) return;
             FormData form;
             try { form = await FormData.GetData(args.Guild.Id, buttons[args.Id]); }
             catch (FormNotFoundException) { return; } /* Ignore Interaction. */
+
+            // Start interaction.
+            await args.Interaction.DeferAsync(true);
 
             // Check if form has no question, send information to user to report this issue.
             if (form.QuestionCount <= 0)
@@ -299,6 +287,7 @@ public class Worker : BackgroundService
                     await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
                 }
 
+                // Wait for submission.
                 submit = await client.GetInteractivity().WaitForModalAsync(form.FormID, args.User,
                     TimeSpan.FromSeconds(CONSTANT.FILLING_FORM_IN_SECONDS_DEFAULT_TIMEOUT));
                 
@@ -362,12 +351,17 @@ public class Worker : BackgroundService
 
             // Send message to submission channel.
             msgBuilder.Embed = embed;
-            await formSubmissionChannel.SendMessageAsync(msgBuilder);
+            msgHandler = await formSubmissionChannel.SendMessageAsync(msgBuilder);
 
             // Send notification to user.
             try { await msgHandler.ModifyAsync("Your submission has been sent."); }
             catch (NotFoundException) { /* Ignore if message handler has been deleted. */ }
         }
+    }
+
+    private async Task ClientModalSubmittedCallback(DiscordClient sender, ModalSubmitEventArgs args)
+    {
+        await Task.CompletedTask;
     }
 
     #endregion

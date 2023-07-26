@@ -104,6 +104,7 @@ public class HelpCommandsModule : BaseCommandModule
                     continue;
 
                 case CMD_CONSTANT.HELP_COMMAND_NAME:
+                    commandName = await Help(user, msgHandler);
                     continue;
                 
                 case CMD_CONSTANT.PING_COMMAND_NAME:
@@ -157,7 +158,7 @@ public class HelpCommandsModule : BaseCommandModule
         if (pickBtn.TimedOut) return null;
 
         // Respond the button.
-        await pickBtn.Result.Interaction.DeleteOriginalResponseAsync();
+        await pickBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
         // Return command name to change page.
         return pickBtn.Result.Id;
@@ -171,12 +172,14 @@ public class HelpCommandsModule : BaseCommandModule
             Title = "~ Ping Command Help ~",
         };
         var pingMS = client.Ping;
-        embed.Description = $"This is a Ping Command, used to check how much latency am I?\n"
+        embed.Description = $"This is a Ping Command, used to check how much latency I am.\n"
             + "This does made me thinking, am I Okay?...\n"
             + $"Checking my Heartbeat... Beep Boop... Pong! {pingMS}ms\n\n"
             + $"`{(pingMS < 100 ? "I am Speeeeeeeeed! :D" : (pingMS > 1000 ? "I don't feel well today :(" : "~ Oh! I'm Okay! :) ~"))}`";
         embed.AddField("💻 Command Examples",
-            $"```{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME}```");
+            $"```{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.PING_COMMAND_NAME}```");
+        embed.AddField("⚔️ Slash Command",
+            $"```/{CMD_CONSTANT.PING_COMMAND_NAME}```");
         
         // Create interaction message.
         var msgBuilder = new DiscordMessageBuilder(msgHandler);
@@ -194,7 +197,48 @@ public class HelpCommandsModule : BaseCommandModule
         if (pickBtn.TimedOut) return null;
 
         // Respond the button.
-        await pickBtn.Result.Interaction.DeleteOriginalResponseAsync();
+        await pickBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+
+        // Return command name to change page.
+        return pickBtn.Result.Id;
+    }
+
+    public static async Task<string?> Help(DiscordUser user, DiscordMessage msgHandler)
+    {
+        // Create initial embed.
+        DiscordEmbedBuilder embed = new DiscordEmbedBuilder() {
+            Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
+            Title = "~ Help Command ~",
+            Description = "Need a Help? Wait... you already in help command."
+        };
+        embed.AddField("💻 Command Examples",
+            $"```\n{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME}\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} [command]\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} {CMD_CONSTANT.PING_COMMAND_NAME}\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} {CMD_CONSTANT.FORM_COMMAND_NAME}```");
+        embed.AddField("⚔️ Slash Command",
+            $"```/{CMD_CONSTANT.HELP_COMMAND_NAME}\n"
+            + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command\n"
+            + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command:{CMD_CONSTANT.PING_COMMAND_NAME}\n"
+            + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command:{CMD_CONSTANT.FORM_COMMAND_NAME}```");
+        
+        // Create interaction message.
+        var msgBuilder = new DiscordMessageBuilder(msgHandler);
+        msgBuilder.ClearComponents();
+        msgBuilder.Embed = embed;
+        msgBuilder.AddComponents(MainMenuBtnComp);
+
+        // Edit help message interaction.
+        msgHandler = await msgHandler.ModifyAsync(msgBuilder);
+
+        // Wait for picking command detail.
+        var pickBtn = await msgHandler.WaitForButtonAsync(user, TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
+
+        // Check if interaction timeout, then ignore it.
+        if (pickBtn.TimedOut) return null;
+
+        // Respond the button.
+        await pickBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
         // Return command name to change page.
         return pickBtn.Result.Id;

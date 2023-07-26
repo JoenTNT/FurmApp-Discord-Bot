@@ -234,7 +234,7 @@ public class FormCommandsModule : BaseCommandModule
         if (pickedBtn.TimedOut) return (string.Empty, "Timeout!");
 
         // Respond to button interaction.
-        await pickedBtn.Result.Interaction.DeleteOriginalResponseAsync();
+        await pickedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
         // Check if interaction has been canceled.
         if (pickedBtn.Result.Id == "cancel") return (string.Empty, "Cancel deletion process.");

@@ -9,6 +9,11 @@ namespace FurmAppDBot.Commands;
 // TODO: Prefix Command.
 public class PrefixCommandsModule : BaseCommandModule
 {
+    // TODO: Prefix Command.
+    // [Command(CMD_CONSTANT.GET_PREFIX_COMMAND_NAME)]
+    // public async Task GetPrefix(CommandContext ctx)
+    //     => await PrefixCommand.GetPrefix(ctx);
+    
     [Command(CMD_CONSTANT.PREFIX_COMMAND_NAME)]
     public async Task Prefix(CommandContext ctx, string commandName, params string[] inputs)
     {
