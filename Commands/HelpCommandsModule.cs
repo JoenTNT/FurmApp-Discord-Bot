@@ -92,6 +92,7 @@ public class HelpCommandsModule : BaseCommandModule
                     continue;
 
                 case CMD_CONSTANT.BUTTON_COMMAND_NAME:
+                    commandName = await Button(user, msgHandler);
                     continue;
                 
                 case CMD_CONSTANT.CONNECT_COMMAND_NAME:
@@ -213,15 +214,63 @@ public class HelpCommandsModule : BaseCommandModule
         };
         embed.AddField("💻 Command Examples",
             $"```\n{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME}\n"
-            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} [command]\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} [command]\n\n"
             + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} {CMD_CONSTANT.PING_COMMAND_NAME}\n"
             + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.HELP_COMMAND_NAME} {CMD_CONSTANT.FORM_COMMAND_NAME}```");
         embed.AddField("⚔️ Slash Command",
-            $"```/{CMD_CONSTANT.HELP_COMMAND_NAME}\n"
-            + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command\n"
+            $"```\n/{CMD_CONSTANT.HELP_COMMAND_NAME}\n"
+            + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command\n\n"
             + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command:{CMD_CONSTANT.PING_COMMAND_NAME}\n"
             + $"/{CMD_CONSTANT.HELP_COMMAND_NAME} command:{CMD_CONSTANT.FORM_COMMAND_NAME}```");
         
+        // Create interaction message.
+        var msgBuilder = new DiscordMessageBuilder(msgHandler);
+        msgBuilder.ClearComponents();
+        msgBuilder.Embed = embed;
+        msgBuilder.AddComponents(MainMenuBtnComp);
+
+        // Edit help message interaction.
+        msgHandler = await msgHandler.ModifyAsync(msgBuilder);
+
+        // Wait for picking command detail.
+        var pickBtn = await msgHandler.WaitForButtonAsync(user, TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
+
+        // Check if interaction timeout, then ignore it.
+        if (pickBtn.TimedOut) return null;
+
+        // Respond the button.
+        await pickBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+
+        // Return command name to change page.
+        return pickBtn.Result.Id;
+    }
+
+    public static async Task<string?> Button(DiscordUser user, DiscordMessage msgHandler)
+    {
+        // Create initial embed.
+        DiscordEmbedBuilder embed = new DiscordEmbedBuilder() {
+            Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
+            Title = "~ Help Command ~",
+            Description = "Need a Help? Wait... you already in help command."
+        };
+        embed.AddField("💻 Command Examples",
+            $"```\n{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.BUTTON_COMMAND_NAME} <subcommand> [value]\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.ADD_COMMAND_NAME} <message-ID>\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.DELETE_COMMAND_NAME} <message-ID> [button-ID]\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.GET_COMMAND_NAME} <message-ID>\n\n"
+            + $"{CONSTANT.DEFAULT_PREFIX}{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.GET_COMMAND_NAME} 1234567890123456789\n```");
+        embed.AddField("⚔️ Slash Command",
+            $"```\n/{CMD_CONSTANT.BUTTON_COMMAND_NAME} <subcommand> [value]\n"
+            + $"/{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.ADD_COMMAND_NAME} messageID\n"
+            + $"/{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.DELETE_COMMAND_NAME} messageID [button-ID]\n"
+            + $"/{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.GET_COMMAND_NAME} messageID\n\n"
+            + $"/{CMD_CONSTANT.BUTTON_COMMAND_NAME} {CMD_CONSTANT.GET_COMMAND_NAME} 1234567890123456789```");
+        embed.Footer = new DiscordEmbedBuilder.EmbedFooter { 
+            Text = "To get message ID, right click on target message, then select `Copy Message Link` "
+            + "then copy the ID on the right most of the link after slash (/), "
+            + "or `Copy Message ID` if you are in developer mode.",
+        };
+
         // Create interaction message.
         var msgBuilder = new DiscordMessageBuilder(msgHandler);
         msgBuilder.ClearComponents();

@@ -87,7 +87,7 @@ public class ButtonCommandsModule : BaseCommandModule
     {
         // Search for target message.
         DiscordMessage msgFound;
-        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID)); }
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true); }
         catch (NotFoundException) // Message not found exception.
         {
             // Notify by message handler.
@@ -408,8 +408,7 @@ public class ButtonCommandsModule : BaseCommandModule
 
         // Added all components back to the message.
         modifiedTargetMsg.ClearComponents();
-        foreach (var comp in comps)
-            modifiedTargetMsg.AddComponents(comp.ToArray());
+        foreach (var comp in comps) modifiedTargetMsg.AddComponents(comp);
 
         // Saving to database.
         InterfaceData buttonInterfaceData;
@@ -428,6 +427,8 @@ public class ButtonCommandsModule : BaseCommandModule
         
         // Final editing steps, then notify finish state.
         await targetMsg.ModifyAsync(modifiedTargetMsg);
+
+        // Notify finish process.
         await msgHandler.ModifyAsync(new DiscordMessageBuilder()
             .WithContent("Successfully set button on target message! You can now delete this message.\n"
             + $"Check it out: https://discord.com/channels/{targetMsg.Channel.GuildId}/{targetMsg.ChannelId}/{targetMsg.Id}"));

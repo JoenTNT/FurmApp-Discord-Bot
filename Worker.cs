@@ -309,12 +309,11 @@ public class Worker : BackgroundService
                 modalPage++;
             } while (questionRevealCount < form.QuestionCount);
 
-            // Interaction to last submission.
-            var msgResult = new DiscordInteractionResponseBuilder().WithContent("Processing...");
-            msgResult.AsEphemeral();
-            await proceedBtn.Result.Interaction.DeleteOriginalResponseAsync();
-            await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, msgResult);
-            msgHandler = await submit.Value.Result.Interaction.GetOriginalResponseAsync();
+            // Notify submission.
+            await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+
+            try { await proceedBtn.Result.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder { Content = "Processing...", }); }
+            catch (NotFoundException) { /* Ignore if message handler has been deleted. */ }
 
             // Get channel category as container of submission.
             ulong ccID = await SettingCommandsModule.GetChannelCategory(await args.Guild.GetMemberAsync(client.CurrentUser.Id), args.Guild);
@@ -351,10 +350,11 @@ public class Worker : BackgroundService
 
             // Send message to submission channel.
             msgBuilder.Embed = embed;
-            msgHandler = await formSubmissionChannel.SendMessageAsync(msgBuilder);
+            await formSubmissionChannel.SendMessageAsync(msgBuilder);
 
             // Send notification to user.
-            try { await msgHandler.ModifyAsync("Your submission has been sent."); }
+            try { await proceedBtn.Result.Interaction.EditOriginalResponseAsync(
+                new DiscordWebhookBuilder { Content = "Your submission has been sent.", }); }
             catch (NotFoundException) { /* Ignore if message handler has been deleted. */ }
         }
     }

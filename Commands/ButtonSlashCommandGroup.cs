@@ -87,7 +87,7 @@ public class ButtonSlashCommandGroup : ApplicationCommandModule
             try
             {
                 // Search for target message.
-                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true);
 
                 // Get and send information.
                 await ButtonCommandsModule.Get(new DiscordEmbedBuilder.EmbedAuthor {
