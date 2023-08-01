@@ -27,7 +27,7 @@ public class FurmAppClient
     private static FurmAppClient? s_instance = null;
 
     private DiscordClient? _client = null;
-    private ILogger<Worker>? _logger = null;
+    private ILogger<DiscordBotWorker>? _logger = null;
     private IConfiguration? _config = null;
 
     #endregion
@@ -38,7 +38,7 @@ public class FurmAppClient
 
     public DiscordClient Client => _client;
 
-    public ILogger<Worker> Logger => _logger;
+    public ILogger<DiscordBotWorker> Logger => _logger;
 
     public IConfiguration Config => _config;
 
@@ -52,7 +52,7 @@ public class FurmAppClient
 
     #region Main
 
-    public static void Init(DiscordClient client, ILogger<Worker> logger, IConfiguration config)
+    public static void Init(DiscordClient client, ILogger<DiscordBotWorker> logger, IConfiguration config)
     {
         if (s_instance != null) return;
 

@@ -21,9 +21,9 @@ public class MainDatabase
     private static MainDatabase? s_instance;
 
     //private const string CONNECTION_URL = "mongodb+srv://<username>:<password>@cluster0.gefnhnd.mongodb.net/?retryWrites=true&w=majority";
-    private const string CONNECTION_URL = "mongodb://localhost:27017";
+    private const string CONNECTION_URL = "mongodb://<address>:<port>";
 
-    private ILogger<Worker>? _logger = null;
+    private ILogger<DiscordBotWorker>? _logger = null;
     private IConfiguration? _config = null;
 
     private MongoClientSettings? _settings = null;
@@ -52,10 +52,14 @@ public class MainDatabase
 
     private MainDatabase(IConfiguration config)
     {
+        // Replace formats.
         _url = CONNECTION_URL
             .Replace("<username>", config["MONGO_USER"])
-            .Replace("<password>", config["MONGO_PW"]);
+            .Replace("<password>", config["MONGO_PW"])
+            .Replace("<address>", config["ADDRESS"])
+            .Replace("<port>", config["PORT"]);
 
+        // Create database connection settings.
         _settings = MongoClientSettings.FromConnectionString(_url);
         _settings.ServerApi = new ServerApi(ServerApiVersion.V1);
         //_settings.DirectConnection = true; // Local connection only
@@ -235,7 +239,7 @@ public class MainDatabase
         return _client;
     }
 
-    public static async Task Init(ILogger<Worker> logger, IConfiguration config)
+    public static async Task Init(ILogger<DiscordBotWorker> logger, IConfiguration config)
     {
         if (s_instance != null) return;
 

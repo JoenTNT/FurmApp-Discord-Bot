@@ -4,7 +4,6 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Exceptions;
 using DSharpPlus.Interactivity;
-using DSharpPlus.Interactivity.Enums;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using FurmAppDBot.Clients;
@@ -14,11 +13,11 @@ using FurmAppDBot.Databases.Exceptions;
 
 namespace FurmAppDBot;
 
-public class Worker : BackgroundService
+public class DiscordBotWorker : BackgroundService
 {
     #region Variables
 
-    private readonly ILogger<Worker> _logger;
+    private readonly ILogger<DiscordBotWorker> _logger;
     private readonly IConfiguration _config;
 
     // Clients
@@ -40,7 +39,7 @@ public class Worker : BackgroundService
 
     #region Constructor
 
-    public Worker(ILogger<Worker> _logger, IConfiguration _config)
+    public DiscordBotWorker(ILogger<DiscordBotWorker> _logger, IConfiguration _config)
     {
         this._logger = _logger;
         this._config = _config;
