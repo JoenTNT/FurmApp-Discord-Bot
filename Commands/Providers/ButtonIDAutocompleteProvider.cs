@@ -18,7 +18,7 @@ public class ButtonIDAutocompleteProvider : IAutocompleteProvider
         DiscordMessage targetMsg;
         try
         {
-            var task = ctx.Channel.GetMessageAsync(ulong.Parse((string)msgIDOP.Value));
+            var task = ctx.Channel.GetMessageAsync(ulong.Parse((string)msgIDOP.Value), true);
             task.Wait();
             targetMsg = task.Result;
         }

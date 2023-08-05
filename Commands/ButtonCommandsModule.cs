@@ -57,7 +57,7 @@ public class ButtonCommandsModule : BaseCommandModule
     {
         // Search for target message.
         DiscordMessage msgFound;
-        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID)); }
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true); }
         catch (NotFoundException) // Message not found exception.
         {
             // Notify by message handler.
@@ -112,7 +112,7 @@ public class ButtonCommandsModule : BaseCommandModule
     {
         // Search for target message.
         DiscordMessage msgFound;
-        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID)); }
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true); }
         catch (NotFoundException) // Message not found exception.
         {
             // Notify by message handler.

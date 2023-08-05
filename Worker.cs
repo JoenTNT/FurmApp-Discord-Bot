@@ -60,6 +60,8 @@ public class DiscordBotWorker : BackgroundService
             Token = _config["DBToken"],
             TokenType = TokenType.Bot,
             Intents = DiscordIntents.All | DiscordIntents.AllUnprivileged,
+            AlwaysCacheMembers = false,
+            MessageCacheSize = 0,
         };
 
         // Create new client.
@@ -344,7 +346,7 @@ public class DiscordBotWorker : BackgroundService
             for (int i = 0; i < form.QuestionCount; i++)
             {
                 question = form[i];
-                embed.AddField($"**{question.Label}**", $"{answers[question.CustomId]}", true);
+                embed.AddField($"**{question.Label}**", $"{answers[question.CustomId]}", false);
             }
 
             // Send message to submission channel.

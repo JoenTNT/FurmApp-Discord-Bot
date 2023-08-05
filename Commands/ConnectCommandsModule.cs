@@ -27,7 +27,7 @@ public class ConnectCommandsModule: BaseCommandModule
             {
                 // TODO: Check component target.
                 // Search for target message.
-                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true);
 
                 // Check if the target message has the button with specific ID, if not then abort.
                 if (!msgFound.IsComponentWithIDExists(buttonID))

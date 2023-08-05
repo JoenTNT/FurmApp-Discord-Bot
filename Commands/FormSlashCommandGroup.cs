@@ -161,22 +161,31 @@ public class FormSlashCommandGroup : ApplicationCommandModule
             DiscordInteractionResponseBuilder modal = new DiscordInteractionResponseBuilder()
                 .WithTitle("This is a Sample Modal")
                 .WithCustomId(modalID)
-                .AddComponents(
+                .AddComponents(new DiscordComponent[] {
                     new TextInputComponent("This is First Question", "q1", max_length: 64)
                     {
                         Placeholder = "A Placeholder with Optional Short Input.",
                         Style = TextInputStyle.Short,
                         Required = true,
                     }
-                )
-                .AddComponents(
+                })
+                .AddComponents(new DiscordComponent[] {
                     new TextInputComponent("This is Second Question?", "q2", max_length: 256)
                     {
                         Placeholder = $"A Placeholder with Required Paragraph Input.",
                         Style = TextInputStyle.Paragraph,
                         Required = false,
                     }
-                );
+                })
+                .AddComponents(new DiscordComponent[] {
+                    new TextInputComponent("This is Second Question?", "q2", max_length: 1024, min_length: 100)
+                    {
+                        Placeholder = $"A Placeholder with Required Paragraph Input.",
+                        Style = TextInputStyle.Paragraph,
+                        Required = false,
+                    }
+                });
+                
             
             await ctx.CreateResponseAsync(InteractionResponseType.Modal, modal);
             var submittedModal = await interactivity.WaitForModalAsync(modalID, ctx.User,

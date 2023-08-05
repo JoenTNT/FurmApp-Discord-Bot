@@ -347,13 +347,13 @@ public class QuestionCommandsModule : BaseCommandModule
     {
         // Change question property of form.
         FormData form = await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
-        form.SetQuestionProps(questionNum, question, style, placeholder, required, minLength, maxLength);
+        form.SetQuestionProps(questionNum - 1, question, style, placeholder, required, minLength, maxLength);
         await form.SaveData();
         
         // Notify success message.
         var q = form[questionNum - 1];
-        await  msgHandler.ModifyAsync($"[Form: {formID}]\nSuccessfully changed property the question number {questionNum - 1}.\n"
-            + $"```Question     : {q.Label}\n"
+        await  msgHandler.ModifyAsync($"[Form: {formID}]\nSuccessfully changed property the question number {questionNum}.\n"
+            + $"```Question    : {q.Label}\n"
             + $"Style       : {(q.Style == TextInputStyle.Short ? "Short" : "Long")}\n"
             + $"Placeholder : {q.Placeholder}\n"
             + $"Required    : {q.Required}\n"

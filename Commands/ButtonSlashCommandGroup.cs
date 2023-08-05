@@ -34,7 +34,7 @@ public class ButtonSlashCommandGroup : ApplicationCommandModule
             try
             {
                 // Search for target message.
-                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true);
 
                 // Check if the target message is not the bot itself, this must be prevent due to Discord limitation.
                 if (msgFound.Author.Id != ctx.Client.CurrentUser.Id)
@@ -138,7 +138,7 @@ public class ButtonSlashCommandGroup : ApplicationCommandModule
             try
             {
                 // Search for target message.
-                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID));
+                DiscordMessage msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true);
 
                 // Check if user did not provide the button ID, then make user choosing it.
                 if (string.IsNullOrEmpty(buttonID))
