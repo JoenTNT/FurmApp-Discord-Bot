@@ -26,7 +26,7 @@ public class RenamedFormNameAutocompleteProvider : IAutocompleteProvider
 
         // Check availability of form ID.
         var db = MainDatabase.Instance;
-        bool isIDAvailable = await db.HandleDBProcess<bool>(async () => {
+        bool isIDExists = await db.HandleDBProcess<bool>(async () => {
             try { await FormData.GetData(guild.Id, input); }
             catch (FormNotFoundException) { return false; }
             return true;
@@ -34,7 +34,7 @@ public class RenamedFormNameAutocompleteProvider : IAutocompleteProvider
 
         // Return hint information.
         return new DiscordAutoCompleteChoice[] { new DiscordAutoCompleteChoice(
-            $"Renamed to \"{formName}\" [{(isIDAvailable ? "Available" : "Already Registered")}]", formName) };
+            $"Renamed to \"{formName}\" [{(isIDExists ? "Already Registered" : "Available")}]", formName) };
     }
 
     #endregion
