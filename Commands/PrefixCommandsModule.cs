@@ -17,7 +17,8 @@ public class PrefixCommandsModule : BaseCommandModule
     [Command(CMD_CONSTANT.PREFIX_COMMAND_NAME)]
     public async Task Prefix(CommandContext ctx, string commandName, params string[] inputs)
     {
-
+        // TODO: Change prefix for specific Guild.
+        await Task.CompletedTask;
     }
     
     // public static async Task GetPrefix(InteractionContext ctx)

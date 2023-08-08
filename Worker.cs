@@ -60,6 +60,7 @@ public class DiscordBotWorker : BackgroundService
             Token = _config["DBToken"],
             TokenType = TokenType.Bot,
             Intents = DiscordIntents.All | DiscordIntents.AllUnprivileged,
+            AlwaysCacheMembers = false,
             MessageCacheSize = 0,
         };
 

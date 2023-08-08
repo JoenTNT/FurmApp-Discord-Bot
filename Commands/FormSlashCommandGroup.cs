@@ -16,7 +16,8 @@ public class FormSlashCommandGroup : ApplicationCommandModule
     [SlashCommand(CMD_CONSTANT.CREATE_COMMAND_NAME, CMD_CONSTANT.CREATE_FORM_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task Create(InteractionContext ctx,
-        [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION)]
+        [Option(CMD_CONSTANT.FORM_ID_PARAMETER, CMD_CONSTANT.FORM_ID_PARAMETER_DESCRIPTION, true)]
+        [Autocomplete(typeof(RenamedFormNameAutocompleteProvider))]
         string formID)
     {
         // Deferring interaction.
@@ -118,6 +119,22 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
+    [SlashCommand(CMD_CONSTANT.DUPLICATE_COMMAND_NAME, CMD_CONSTANT.DUPLICATE_FORM_COMMAND_DESCRIPTION)]
+    [SlashCommandPermissions(Permissions.ManageGuild)]
+    public async Task Duplicate(InteractionContext ctx)
+    {
+        // TODO: Slash command duplicate form.
+        await Task.CompletedTask;
+    }
+
+    [SlashCommand(CMD_CONSTANT.RENAME_COMMAND_NAME, CMD_CONSTANT.RENAME_FORM_COMMAND_DESCRIPTION)]
+    [SlashCommandPermissions(Permissions.ManageGuild)]
+    public async Task Rename(InteractionContext ctx)
+    {
+        // TODO: Slash command rename form.
+        await Task.CompletedTask;
+    }
+
     [SlashCommand(CMD_CONSTANT.GET_ALL_COMMAND_NAME, CMD_CONSTANT.GET_FORMS_COMMAND_DESCRIPTION)]
     [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task GetAll(InteractionContext ctx)
@@ -150,63 +167,63 @@ public class FormSlashCommandGroup : ApplicationCommandModule
         catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
     }
 
-    // TEMPORARY: For testing modal form feature in Discord.
-    [SlashCommand("samplemodal", "For testing a sample modal")]
-    public async Task SampleModal(InteractionContext ctx)
-    {
-        try
-        {
-            InteractivityExtension interactivity = ctx.Client.GetInteractivity();
-            var modalID = "sample_modal";
-            DiscordInteractionResponseBuilder modal = new DiscordInteractionResponseBuilder()
-                .WithTitle("This is a Sample Modal")
-                .WithCustomId(modalID)
-                .AddComponents(new DiscordComponent[] {
-                    new TextInputComponent("This is First Question", "q1", max_length: 64)
-                    {
-                        Placeholder = "A Placeholder with Optional Short Input.",
-                        Style = TextInputStyle.Short,
-                        Required = true,
-                    }
-                })
-                .AddComponents(new DiscordComponent[] {
-                    new TextInputComponent("This is Second Question?", "q2", max_length: 256)
-                    {
-                        Placeholder = $"A Placeholder with Required Paragraph Input.",
-                        Style = TextInputStyle.Paragraph,
-                        Required = false,
-                    }
-                })
-                .AddComponents(new DiscordComponent[] {
-                    new TextInputComponent("This is Second Question?", "q2", max_length: 1024, min_length: 100)
-                    {
-                        Placeholder = $"A Placeholder with Required Paragraph Input.",
-                        Style = TextInputStyle.Paragraph,
-                        Required = false,
-                    }
-                });
+    // // TEMPORARY: For testing modal form feature in Discord.
+    // [SlashCommand("samplemodal", "For testing a sample modal")]
+    // public async Task SampleModal(InteractionContext ctx)
+    // {
+    //     try
+    //     {
+    //         InteractivityExtension interactivity = ctx.Client.GetInteractivity();
+    //         var modalID = "sample_modal";
+    //         DiscordInteractionResponseBuilder modal = new DiscordInteractionResponseBuilder()
+    //             .WithTitle("This is a Sample Modal")
+    //             .WithCustomId(modalID)
+    //             .AddComponents(new DiscordComponent[] {
+    //                 new TextInputComponent("This is First Question", "q1", max_length: 64)
+    //                 {
+    //                     Placeholder = "A Placeholder with Optional Short Input.",
+    //                     Style = TextInputStyle.Short,
+    //                     Required = true,
+    //                 }
+    //             })
+    //             .AddComponents(new DiscordComponent[] {
+    //                 new TextInputComponent("This is Second Question?", "q2", max_length: 256)
+    //                 {
+    //                     Placeholder = $"A Placeholder with Required Paragraph Input.",
+    //                     Style = TextInputStyle.Paragraph,
+    //                     Required = false,
+    //                 }
+    //             })
+    //             .AddComponents(new DiscordComponent[] {
+    //                 new TextInputComponent("This is Second Question?", "q2", max_length: 1024, min_length: 100)
+    //                 {
+    //                     Placeholder = $"A Placeholder with Required Paragraph Input.",
+    //                     Style = TextInputStyle.Paragraph,
+    //                     Required = false,
+    //                 }
+    //             });
                 
             
-            await ctx.CreateResponseAsync(InteractionResponseType.Modal, modal);
-            var submittedModal = await interactivity.WaitForModalAsync(modalID, ctx.User,
-                TimeSpan.FromSeconds(CONSTANT.FILLING_FORM_IN_SECONDS_DEFAULT_TIMEOUT));
+    //         await ctx.CreateResponseAsync(InteractionResponseType.Modal, modal);
+    //         var submittedModal = await interactivity.WaitForModalAsync(modalID, ctx.User,
+    //             TimeSpan.FromSeconds(CONSTANT.FILLING_FORM_IN_SECONDS_DEFAULT_TIMEOUT));
 
-            if (submittedModal.TimedOut)
-            {
-                await submittedModal.Result.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("TIMEOUT!"));
-                return;
-            }
+    //         if (submittedModal.TimedOut)
+    //         {
+    //             await submittedModal.Result.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+    //                 new DiscordInteractionResponseBuilder().WithContent("TIMEOUT!"));
+    //             return;
+    //         }
 
-            await submittedModal.Result.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().WithContent("Form has been submitted. " 
-                    + $"(Result: {submittedModal.Result.Values["input_2"]})")
-            );
-        }
-        catch (Exception ex)
-        {
-            FurmAppClient.Instance.Logger.LogError(ex, string.Empty);
-        }
-    }
+    //         await submittedModal.Result.Interaction.CreateResponseAsync(
+    //             InteractionResponseType.ChannelMessageWithSource,
+    //             new DiscordInteractionResponseBuilder().WithContent("Form has been submitted. " 
+    //                 + $"(Result: {submittedModal.Result.Values["input_2"]})")
+    //         );
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         FurmAppClient.Instance.Logger.LogError(ex, string.Empty);
+    //     }
+    // }
 }

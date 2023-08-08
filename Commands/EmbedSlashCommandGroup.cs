@@ -62,5 +62,6 @@ public class EmbedSlashCommandGroup : ApplicationCommandModule
         //     // TODO: Handle exception.
         //     return;
         // }
+        await Task.CompletedTask;
     }
 }

@@ -1,10 +1,7 @@
 using DSharpPlus;
 using DSharpPlus.Entities;
-using FurmAppDBot.Clients;
 using FurmAppDBot.Databases.Exceptions;
 using MongoDB.Bson;
-using MongoDB.Bson.IO;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace FurmAppDBot.Databases;
@@ -308,6 +305,12 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
         _questions[q2Index] = temp;
     }
 
+    /// <summary>
+    /// Set channel as container.
+    /// </summary>
+    /// <param name="channel">Target channel as container</param>
+    public void SetChannelAsContainer(ulong channelID) => _channelName = $"{channelID}";
+
     /// <exception cref="DBClientTimeoutException">
     /// When database client connection timeout happens.
     /// </exception>
@@ -368,6 +371,32 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
         data = new FormData(MainDatabase.Instance, guildID, formID);
         await data.SaveData();
         return data;
+    }
+
+    /// <summary>
+    /// Delete specific form data permanently.
+    /// </summary>
+    /// <param name="guildID">Target guild ID</param>
+    /// <param name="formID">Target existing form ID</param>
+    /// <returns>True if successfully deleted.</returns>
+    public static async Task<bool> DeleteData(ulong guildID, string formID)
+    {
+        // Get database instance.
+        MainDatabase db = MainDatabase.Instance;
+
+        // Handle database timeout when using it.
+        return await db.HandleDBProcess(async () => {
+            // Receive collection from database.
+            var collection = await db.InitCollection(guildID, DB_CONSTANT.FORM_DATABASE_NAME);
+
+            // Check if the form document does not exists, then abort process.
+            var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, formID);
+            if (!await collection.Find(filter).AnyAsync()) return false;
+
+            // Start deleting document from database.
+            await collection.DeleteOneAsync(filter);
+            return true;
+        });
     }
 
     #endregion

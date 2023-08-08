@@ -26,6 +26,9 @@ public class HelpCommandsModule : BaseCommandModule
     private static DiscordButtonComponent ConnectCommandBtnComp => new DiscordButtonComponent(
         ButtonStyle.Primary, CMD_CONSTANT.CONNECT_COMMAND_NAME, null, emoji: new DiscordComponentEmoji("⛓️"));
 
+    private static DiscordButtonComponent ContainerCommandBtnComp => new DiscordButtonComponent(
+        ButtonStyle.Primary, CMD_CONSTANT.CONTAINER_COMMAND_NAME, null, emoji: new DiscordComponentEmoji("📦"));
+
     private static DiscordButtonComponent EmbedCommandBtnComp => new DiscordButtonComponent(
         ButtonStyle.Primary, CMD_CONSTANT.EMBED_COMMAND_NAME, null, emoji: new DiscordComponentEmoji("🖼️"));
 
@@ -127,26 +130,27 @@ public class HelpCommandsModule : BaseCommandModule
         DiscordEmbedBuilder embed = new DiscordEmbedBuilder() {
             Color = new DiscordColor(CMD_CONSTANT.EMBED_HEX_COLOR_DEFAULT),
             Title = "Need Help?",
+            Description = $"Here's the summary list of main commands (Prefix: `{CONSTANT.DEFAULT_PREFIX}`):\n"
+                + $"> 1. ▶️ **Button** Command `=>` `{CMD_CONSTANT.BUTTON_COMMAND_NAME}`\n"
+                + $"> 2. ⛓️ **Connect** Command `=>` `{CMD_CONSTANT.CONNECT_COMMAND_NAME}`\n"
+                + $"> 3. 📦 **Container** Command `=>` `{CMD_CONSTANT.CONTAINER_COMMAND_NAME}`\n"
+                + $"> 4. 🖼️ **Embed** Command `=>` `{CMD_CONSTANT.EMBED_COMMAND_NAME}`\n"
+                + $"> 5. 📝 **Form** Command `=>` `{CMD_CONSTANT.FORM_COMMAND_NAME}`\n"
+                + $"> 6. ❓ **Help** Command `=>` `{CMD_CONSTANT.HELP_COMMAND_NAME}`\n"
+                + $"> 7. ❗ **Ping** Command `=>` `{CMD_CONSTANT.PING_COMMAND_NAME}`\n"
+                + $"> 8. 🗑️ **Purge** Command `=>` `{CMD_CONSTANT.PURGE_COMMAND_NAME}`\n"
+                + $"> 9. ☁️ **Question** Command `=>` `{CMD_CONSTANT.QUESTION_COMMAND_NAME}`\n"
+                + $"`Choose a command for more help detail.`",
         };
-        embed.Description = $"Here's the summary list of main commands (Prefix: `{CONSTANT.DEFAULT_PREFIX}`):\n"
-            + $"> 1. ▶️ **Button** Command `=>` `{CMD_CONSTANT.BUTTON_COMMAND_NAME}`\n"
-            + $"> 2. ⛓️ **Connect** Command `=>` `{CMD_CONSTANT.CONNECT_COMMAND_NAME}`\n"
-            + $"> 3. 🖼️ **Embed** Command `=>` `{CMD_CONSTANT.EMBED_COMMAND_NAME}`\n"
-            + $"> 4. 📝 **Form** Command `=>` `{CMD_CONSTANT.FORM_COMMAND_NAME}`\n"
-            + $"> 5. ❓ **Help** Command `=>` `{CMD_CONSTANT.HELP_COMMAND_NAME}`\n"
-            + $"> 6. ❗ **Ping** Command `=>` `{CMD_CONSTANT.PING_COMMAND_NAME}`\n"
-            + $"> 7. 🗑️ **Purge** Command `=>` `{CMD_CONSTANT.PURGE_COMMAND_NAME}`\n"
-            + $"> 8. ☁️ **Question** Command `=>` `{CMD_CONSTANT.QUESTION_COMMAND_NAME}`\n"
-            + $"`Choose a command for more help detail.`";
 
         // Create interaction message.
         var msgBuilder = new DiscordMessageBuilder();
         msgBuilder.Embed = embed;
         msgBuilder.AddComponents(new DiscordComponent[] { // First row
-            ButtonCommandBtnComp, ConnectCommandBtnComp, EmbedCommandBtnComp, FormCommandBtnComp, HelpCommandBtnComp
+            ButtonCommandBtnComp, ConnectCommandBtnComp, ContainerCommandBtnComp, EmbedCommandBtnComp, FormCommandBtnComp
         });
         msgBuilder.AddComponents(new DiscordComponent[] { // Second row
-            PingCommandBtnComp, PurgeCommandBtnComp, QuestionCommandBtnComp,
+            HelpCommandBtnComp, PingCommandBtnComp, PurgeCommandBtnComp, QuestionCommandBtnComp,
         });
 
         // Edit help message interaction.

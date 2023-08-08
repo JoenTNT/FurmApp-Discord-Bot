@@ -3,12 +3,10 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
-using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
-using DSharpPlus.SlashCommands;
-using FurmAppDBot.Clients;
 using FurmAppDBot.Databases;
 using FurmAppDBot.Databases.Exceptions;
+using FurmAppDBot.Utilities;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -20,7 +18,7 @@ public class FormCommandsModule : BaseCommandModule
 
     [Command(CMD_CONSTANT.FORM_COMMAND_NAME)]
     [RequirePermissions(Permissions.ManageGuild)]
-    public async Task Form(CommandContext ctx, string commandName, string? formID = null)
+    public async Task Form(CommandContext ctx, string commandName, string? formID1 = null, string? formID2 = null)
     {
         // Handle a long process when interacting
         var msgHandler = await ctx.RespondAsync("Please wait for a moment...");
@@ -32,27 +30,42 @@ public class FormCommandsModule : BaseCommandModule
                 // Check form ID input.
                 switch (commandName.ToLower())
                 {
-                    case CMD_CONSTANT.ADD_COMMAND_NAME when string.IsNullOrEmpty(formID):
-                    case CMD_CONSTANT.GET_COMMAND_NAME when string.IsNullOrEmpty(formID):
+                    case CMD_CONSTANT.ADD_COMMAND_NAME when string.IsNullOrEmpty(formID1):
+                    case CMD_CONSTANT.GET_COMMAND_NAME when string.IsNullOrEmpty(formID1):
+                    case CMD_CONSTANT.DUPLICATE_COMMAND_NAME when string.IsNullOrEmpty(formID1):
+                    case CMD_CONSTANT.RENAME_COMMAND_NAME when string.IsNullOrEmpty(formID1):
                         // Cancel process if form ID not input.
                         await msgHandler.ModifyAsync($"Please provide a Form ID, use `{CMD_CONSTANT.GET_ALL_COMMAND_NAME}` "
                             + "command to see all registered Forms.");
+                        return;
+                    case CMD_CONSTANT.DUPLICATE_COMMAND_NAME when string.IsNullOrEmpty(formID2):
+                    case CMD_CONSTANT.RENAME_COMMAND_NAME when string.IsNullOrEmpty(formID2):
+                        // Cancel process if form ID not input.
+                        await msgHandler.ModifyAsync($"Please input second form ID for target command.");
                         return;
                 }
 
                 // Selecting the command by name.
                 switch (commandName.ToLower())
                 {
-                    case CMD_CONSTANT.ADD_COMMAND_NAME when !string.IsNullOrEmpty(formID):
-                        await Add(msgHandler, formID);
+                    case CMD_CONSTANT.ADD_COMMAND_NAME when !string.IsNullOrEmpty(formID1):
+                        await Add(msgHandler, formID1);
                         break;
                     
-                    case CMD_CONSTANT.GET_COMMAND_NAME when !string.IsNullOrEmpty(formID):
-                        await Get(msgHandler, formID);
+                    case CMD_CONSTANT.GET_COMMAND_NAME when !string.IsNullOrEmpty(formID1):
+                        await Get(msgHandler, formID1);
                         break;
 
                     case CMD_CONSTANT.DELETE_COMMAND_NAME:
-                        await Delete(ctx.User, msgHandler, formID);
+                        await Delete(ctx.User, msgHandler, formID1);
+                        break;
+                    
+                    case CMD_CONSTANT.DUPLICATE_COMMAND_NAME when !string.IsNullOrEmpty(formID1) && !string.IsNullOrEmpty(formID2):
+                        await Duplicate(msgHandler, formID1, formID2);
+                        break;
+
+                    case CMD_CONSTANT.RENAME_COMMAND_NAME when !string.IsNullOrEmpty(formID1) && !string.IsNullOrEmpty(formID2):
+                        await Rename(msgHandler, formID1, formID2);
                         break;
                     
                     case CMD_CONSTANT.GET_ALL_COMMAND_NAME:
@@ -71,7 +84,7 @@ public class FormCommandsModule : BaseCommandModule
             catch (FormNotFoundException) // When getting form is not found.
             {
                 // Notify by message handler.
-                await msgHandler.ModifyAsync($"Form with ID `{formID}` does not exists, abort the process.");
+                await msgHandler.ModifyAsync($"Form with ID `{formID1}` does not exists, abort the process.");
             }
         }
         catch (NotFoundException) { /* Ignore/abort process if user deleted any message handler */ }
@@ -90,13 +103,13 @@ public class FormCommandsModule : BaseCommandModule
         try
         {
             // Checking if form already exists.
-            await FormData.GetData(msgHandler.Channel.Guild.Id, formID);
+            await FormData.GetData(msgHandler.Channel.Guild.Id, SimpleUtility.ToDiscordChannelName(formID));
             response.WithContent($"Form `{formID}` has already been registered, abort the process.");
         }
         catch (FormNotFoundException)
         {
             // Creating form if not yet exists.
-            await FormData.CreateData(msgHandler.Channel.Guild.Id, formID);
+            await FormData.CreateData(msgHandler.Channel.Guild.Id, SimpleUtility.ToDiscordChannelName(formID));
             response.WithContent($"Successfully registered form with ID: `{formID}`");
         }
 
@@ -104,7 +117,6 @@ public class FormCommandsModule : BaseCommandModule
         await msgHandler.ModifyAsync(response);
     }
 
-    // TODO: Get Form detail not working.
     public static async Task Get(DiscordMessage msgHandler, string formID)
     {
         // Intialize initial data.
@@ -160,32 +172,64 @@ public class FormCommandsModule : BaseCommandModule
             }
         }
 
-        // TODO: Migrate to FormInterfaceData Process.
-        // Receive database instance.
-        var db = MainDatabase.Instance;
+        try
+        {
+            // Checking if form already exists.
+            await FormData.GetData(msgHandler.Channel.Guild.Id, SimpleUtility.ToDiscordChannelName(formID));
 
-        // Handle database timeout when using it.
-        bool succeed = await db.HandleDBProcess(async () => {
-            // Receive collection from database.
-            var collection = await db.InitCollection(msgHandler.Channel.Guild.Id, DB_CONSTANT.FORM_DATABASE_NAME);
+            // Comfirmation interaction to warn the user.
+            msgHandler = await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent($"Are you sure you want to delete form `{formID}`?\n"
+                    + $"**WARNING**: *Form will permanently deleted and you cannot restore it back.")
+                .AddComponents(new DiscordComponent[] { 
+                    new DiscordButtonComponent(ButtonStyle.Danger, "yes", "Yes"),
+                    new DiscordButtonComponent(ButtonStyle.Secondary, "no", "No"),
+                }));
+            var result = await msgHandler.WaitForButtonAsync(user, TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
 
-            // TODO: Make a comfirmation interaction to warn the user.
-            // Check if the form document does not exists, then abort process.
-            var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, formID);
-            if (!await collection.Find(filter).AnyAsync()) return false;
+            // Check timeout.
+            if (result.TimedOut)
+            {
+                // Notify cancellation process.
+                await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                    .WithContent($"Timeout! Abort the Process."));
+                return;
+            }
+
+            // Check if process cancelled.
+            await result.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+            if (result.Result.Id == "no")
+            {
+                // Notify cancellation process.
+                await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                    .WithContent($"Cancelled! Abort the Process."));
+                return;
+            }
 
             // Notify deletion process is running.
             await msgHandler.ModifyAsync(new DiscordMessageBuilder()
                 .WithContent($"Deleting form with ID {formID}..."));
 
-            // Start deleting document from database.
-            await collection.DeleteOneAsync(filter);
-            return true;
-        });
+            // Deleting form in progress.
+            bool succeed = await FormData.DeleteData(msgHandler.Channel.Guild.Id, formID);
 
-        // Notify successful or unsuccessful deletion process.
-        if (succeed) await msgHandler.ModifyAsync("Form has been successfully deleted!");
-        else await msgHandler.ModifyAsync("Form doesn't exists, abort deletion process.");
+            // Notify successful or unsuccessful deletion process.
+            if (succeed) await msgHandler.ModifyAsync("Form has been successfully deleted!");
+            else await msgHandler.ModifyAsync("Unsuccessfully delete a form, something may be wrong, abort the process.");
+        }
+        catch (FormNotFoundException)
+        {
+            // Notify form not found.
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("Form doesn't exists, abort deletion process."));
+            return;
+        }
+
+        
+
+        
+
+            
     }
 
     public static async Task<(string, string)> WaitForChoosingFormID(DiscordUser user, DiscordMessage msgHandler)
@@ -241,6 +285,18 @@ public class FormCommandsModule : BaseCommandModule
 
         // Select and return the form ID value.
         return (docs[int.Parse(pickedBtn.Result.Id.Substring(1)) - 1][DB_CONSTANT.FORM_ID_KEY].AsString, string.Empty);
+    }
+
+    public static async Task Duplicate(DiscordMessage msgHandler, string formSource, string formDupe)
+    {
+        // TODO: Duplicate form to new one.
+        await Task.CompletedTask;
+    }
+
+    public static async Task Rename(DiscordMessage msgHandler, string formSource, string formRename)
+    {
+        // TODO: Rename form with new ID.
+        await Task.CompletedTask;
     }
 
     public static async Task GetAll(DiscordMessage msgHandler, DiscordEmbedBuilder.EmbedAuthor author)

@@ -42,6 +42,14 @@ public class ButtonCommandsModule : BaseCommandModule
                     case CMD_CONSTANT.DELETE_COMMAND_NAME:
                         await Delete(msgHandler, ctx, messageID, buttonID);
                         break;
+                    
+                    case CMD_CONSTANT.ENABLE_COMMAND_NAME:
+                        await Activate(msgHandler, ctx, messageID, buttonID, true);
+                        break;
+
+                    case CMD_CONSTANT.DISABLE_COMMAND_NAME:
+                        await Activate(msgHandler, ctx, messageID, buttonID, false);
+                        break;
                 }
             }
             catch (DBClientTimeoutException) // When database connection has timed out.
@@ -141,6 +149,41 @@ public class ButtonCommandsModule : BaseCommandModule
 
         // Proceed deleting button from target message.
         await Delete(msgHandler, msgFound, buttonID);
+    }
+
+    public async Task Activate(DiscordMessage msgHandler, CommandContext ctx, string messageID, string? buttonID, bool enabled)
+    {
+        // Search for target message.
+        DiscordMessage msgFound;
+        try { msgFound = await ctx.Channel.GetMessageAsync(ulong.Parse(messageID), true); }
+        catch (NotFoundException) // Message not found exception.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("The message you are looking for does not exists, abort the process.");
+            return;
+        }
+        catch (FormatException) // Wrong input format.
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync("Message ID must be numbers only, abort the process.");
+            return;
+        }
+
+        // Check if user did not provide the button ID, then make user choosing it.
+        if (string.IsNullOrEmpty(buttonID))
+            buttonID = await WaitForChoosingButton(ctx.User, msgHandler, msgFound);
+
+        // Check if there's no respond from user.
+        if (string.IsNullOrEmpty(buttonID))
+        {
+            // Notify by message handler.
+            await msgHandler.ModifyAsync(new DiscordMessageBuilder()
+                .WithContent("Timeout! No Respond from user, abort the process."));
+            return;
+        }
+
+        // Proceed enable or disable button on target message.
+        await Activate(msgHandler, msgFound, buttonID, enabled);
     }
 
     #endregion
@@ -632,6 +675,12 @@ public class ButtonCommandsModule : BaseCommandModule
         await msgHandler.ModifyAsync(new DiscordMessageBuilder {
             Content = "Successfully deleted the button, you can now delete this message.",
         });
+    }
+
+    public static async Task Activate(DiscordMessage msgHandler, DiscordMessage targetMsg, string buttonID, bool enabled)
+    {
+        // TODO: Enable or Disable Button.
+        await Task.CompletedTask;
     }
 
     /// <summary>

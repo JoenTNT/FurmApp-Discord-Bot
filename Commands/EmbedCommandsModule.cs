@@ -43,6 +43,7 @@ public class EmbedCommandsModule : BaseCommandModule
                 break;
 
             case CMD_CONSTANT.EDIT_COMMAND_NAME:
+                // TODO: Edit Embed command.
                 break;
         }
     }
