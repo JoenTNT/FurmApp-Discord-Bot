@@ -76,7 +76,7 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
     /// This is just a customization, by default user's submission will be send to channel with form ID as a name.
     /// WARNING: Same channel name with different form submission is possible, it is recommended to use form ID as channel name.
     /// </summary>
-    public string ChannelName => string.IsNullOrEmpty(_channelName) ? _formID : _channelName;
+    public string Channel => string.IsNullOrEmpty(_channelName) ? _formID : _channelName;
 
     #endregion
 
@@ -123,7 +123,7 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
 
             // Insert default channel name to database.
             await collection.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, _formID),
-                Builders<BsonDocument>.Update.Set(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, ChannelName));
+                Builders<BsonDocument>.Update.Set(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, Channel));
             
             // Clear old data
             _questions.Clear();
@@ -162,7 +162,7 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
             // Get data document from database with filter
             var filter = Builders<BsonDocument>.Filter.Eq(DB_CONSTANT.FORM_ID_KEY, _formID);
             var updateQ = Builders<BsonDocument>.Update.Set(DB_CONSTANT.FORM_QUESTIONS_KEY, _questions);
-            var updateC = Builders<BsonDocument>.Update.Set(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, ChannelName);
+            var updateC = Builders<BsonDocument>.Update.Set(DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, Channel);
             var documentFound = await collection.Find(filter).ToListAsync();
 
             // Check unique data which don't exists in database.
@@ -170,7 +170,7 @@ public sealed class FormData : DataElementBase, ILoadDatabase, ISaveDatabase
             {
                 await collection.InsertOneAsync(new BsonDocument {
                     { DB_CONSTANT.FORM_ID_KEY, $"{_formID}" },
-                    { DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, ChannelName },
+                    { DB_CONSTANT.CHANNEL_AND_CATEGORY_AS_CONTAINER_KEY, Channel },
                     { DB_CONSTANT.FORM_QUESTIONS_KEY, new BsonArray() },
                 });
             }

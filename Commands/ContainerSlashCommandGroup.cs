@@ -38,7 +38,22 @@ public class ContainerSlashCommandGroup : ApplicationCommandModule
                 
                 // Try get channel if exists.
                 DiscordChannel channel;
-                try { channel = ctx.Guild.Channels[ulong.Parse(channelID)]; }
+                try
+                {
+                    // Get all channels.
+                    var channels = ctx.Guild.Channels;
+
+                    // Check specific channel exists.
+                    ulong cid = ulong.Parse(channelID);
+                    if (!channels.ContainsKey(cid))
+                    {
+                        await msgHandler.ModifyAsync("Channel with ID not found, abort the process.");
+                        return;
+                    }
+
+                    // Get specific channel.
+                    channel = ctx.Guild.Channels[cid];
+                }
                 catch (FormatException) // Wrong input format.
                 {
                     // Notify by message handler.

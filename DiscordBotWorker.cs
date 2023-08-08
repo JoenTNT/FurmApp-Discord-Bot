@@ -313,6 +313,7 @@ public class DiscordBotWorker : BackgroundService
             // Notify submission.
             await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
+            // Notify processing.
             try { await proceedBtn.Result.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder { Content = "Processing...", }); }
             catch (NotFoundException) { /* Ignore if message handler has been deleted. */ }
 
@@ -320,12 +321,28 @@ public class DiscordBotWorker : BackgroundService
             ulong ccID = await SettingCommandsModule.GetChannelCategory(await args.Guild.GetMemberAsync(client.CurrentUser.Id), args.Guild);
             DiscordChannel channelCat = args.Guild.GetChannel(ccID);
 
-            // Check if channel for specific form ID submission not yet created.
-            DiscordChannel? formSubmissionChannel = args.Guild.Channels.FirstOrDefault(c => c.Value.Name == form.ChannelName).Value;
+            // Try getting submission container target.
+            var channels = args.Guild.Channels;
+            DiscordChannel? formSubmissionChannel = null;
+            try
+            {
+                // Convert to channel ID.
+                ulong cid = ulong.Parse(form.Channel);
+
+                // Get channel by ID.
+                formSubmissionChannel = channels[cid];
+            }
+            catch (FormatException)
+            {
+                // Use it as a channel name instead of channel ID.
+                formSubmissionChannel = channels.FirstOrDefault(c => c.Value.Name == form.Channel).Value;
+            }
+
+            // Check container not yet exists.
             if (formSubmissionChannel == null)
             {
                 // Create submission channel.
-                formSubmissionChannel = await args.Guild.CreateChannelAsync(form.ChannelName, ChannelType.Text, channelCat);
+                formSubmissionChannel = await args.Guild.CreateChannelAsync(form.Channel, ChannelType.Text, channelCat);
 
                 // Making sure the bot has permission to send message to channel.
                 await formSubmissionChannel.AddOverwriteAsync(await args.Guild.GetMemberAsync(client.CurrentUser.Id),

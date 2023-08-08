@@ -224,12 +224,6 @@ public class FormCommandsModule : BaseCommandModule
                 .WithContent("Form doesn't exists, abort deletion process."));
             return;
         }
-
-        
-
-        
-
-            
     }
 
     public static async Task<(string, string)> WaitForChoosingFormID(DiscordUser user, DiscordMessage msgHandler)
