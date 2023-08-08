@@ -27,7 +27,7 @@ public class RenamedFormNameAutocompleteProvider : IAutocompleteProvider
         // Check availability of form ID.
         var db = MainDatabase.Instance;
         bool isIDExists = await db.HandleDBProcess<bool>(async () => {
-            try { await FormData.GetData(guild.Id, input); }
+            try { await FormData.GetData(guild.Id, formName); }
             catch (FormNotFoundException) { return false; }
             return true;
         });
