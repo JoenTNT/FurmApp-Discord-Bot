@@ -239,34 +239,19 @@ public class DiscordBotWorker : BackgroundService
                 return;
             }
 
-            // Notify form fulfilment.
-            var notifier = new DiscordWebhookBuilder().WithContent(
-                $"The Form is From => https://discord.com/channels/{args.Guild.Id}/{args.Channel.Id}/{args.Message.Id}\n"
-                + "Form is Ready! Press the Button Below to start filling.");
-            notifier.AddComponents(new DiscordButtonComponent(ButtonStyle.Primary, "PROCEED!", "Start"));
-            var msgHandler = await args.Interaction.EditOriginalResponseAsync(notifier);
-
-            // Wait for start filling.
-            var proceedBtn = await client.GetInteractivity().WaitForButtonAsync(msgHandler, args.User,
-                TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
-            
-            // Check timeout, then abort the process.
-            if (proceedBtn.TimedOut)
-            {
-                try { await args.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Timeout!")); }
-                catch (NotFoundException) { return; } /* Ignore Interaction. */
-                return;
-            }
-            
             // Build and start Modal filling by user.
+            DiscordMessage msgHandler;
+            DiscordWebhookBuilder notifier;
             DiscordInteractionResponseBuilder modal;
+            InteractivityResult<ComponentInteractionCreateEventArgs> proceedBtn;
             Dictionary<string, string> answers = new();
             int questionRevealCount = 0, modalPage = 1;
+            int maxPage = (form.QuestionCount / 5) + (form.QuestionCount % 5 == 0 ? 0 : 1);
             InteractivityResult<ModalSubmitEventArgs>? submit = null;
             do {
                 // Create modal.
                 modal = new DiscordInteractionResponseBuilder()
-                    .WithTitle("Fill the Form!")
+                    .WithTitle($"Fill the Form! [Page: {modalPage} / {maxPage}]")
                     .WithCustomId(form.FormID);
 
                 // Reveal 5 questions for each modal.
@@ -275,18 +260,28 @@ public class DiscordBotWorker : BackgroundService
                     if (i < form.QuestionCount) modal.AddComponents(form[i]);
                     else break;
                 }
+
+                // Notify form fulfilment.
+                notifier = new DiscordWebhookBuilder().WithContent(
+                    $"The Form is From => https://discord.com/channels/{args.Guild.Id}/{args.Channel.Id}/{args.Message.Id}\n"
+                    + $"[Page: {modalPage} / {maxPage}] Form is Ready! Press the Button Below to start filling.");
+                notifier.AddComponents(new DiscordButtonComponent(ButtonStyle.Primary, "PROCEED!", "Start"));
+                msgHandler = await args.Interaction.EditOriginalResponseAsync(notifier);
+
+                // Wait for start filling.
+                proceedBtn = await client.GetInteractivity().WaitForButtonAsync(msgHandler, args.User,
+                    TimeSpan.FromSeconds(CMD_CONSTANT.TIMEOUT_SECONDS_DEFAULT));
                 
-                // Check first submission.
-                if (submit == null)
+                // Check timeout, then abort the process.
+                if (proceedBtn.TimedOut)
                 {
-                    // Start filling modal and get submissions from it.
-                    await proceedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+                    try { await args.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().WithContent("Timeout!")); }
+                    catch (NotFoundException) { return; } /* Ignore Interaction. */
+                    return;
                 }
-                else
-                {
-                    // Start filling modal and get submissions from it.
-                    await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
-                }
+
+                // Start filling modal and get submissions from it.
+                await proceedBtn.Result.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
 
                 // Wait for submission.
                 submit = await client.GetInteractivity().WaitForModalAsync(form.FormID, args.User,
@@ -301,6 +296,9 @@ public class DiscordBotWorker : BackgroundService
                     return;
                 }
 
+                // Notify submission.
+                await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
+
                 // Put submissions to temporary list of data.
                 foreach (var ans in submit.Value.Result.Values)
                     answers.Add(ans.Key, ans.Value);
@@ -309,9 +307,6 @@ public class DiscordBotWorker : BackgroundService
                 questionRevealCount += 5;
                 modalPage++;
             } while (questionRevealCount < form.QuestionCount);
-
-            // Notify submission.
-            await submit.Value.Result.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage);
 
             // Notify processing.
             try { await proceedBtn.Result.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder { Content = "Processing...", }); }
