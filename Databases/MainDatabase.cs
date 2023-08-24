@@ -21,7 +21,7 @@ public class MainDatabase
     private static MainDatabase? s_instance;
 
     //private const string CONNECTION_URL = "mongodb+srv://<username>:<password>@cluster0.gefnhnd.mongodb.net/?retryWrites=true&w=majority";
-    private const string CONNECTION_URL = "mongodb://<address>:<port>";
+    private const string CONNECTION_URL = "mongodb://<address>:<port>/?authSource=admin";
 
     private ILogger<DiscordBotWorker>? _logger = null;
     private IConfiguration? _config = null;
@@ -63,6 +63,7 @@ public class MainDatabase
         _settings = MongoClientSettings.FromConnectionString(_url);
         _settings.ServerApi = new ServerApi(ServerApiVersion.V1);
         //_settings.DirectConnection = true; // Local connection only
+        _settings.
     }
 
     #endregion
