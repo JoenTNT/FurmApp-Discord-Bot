@@ -20,9 +20,6 @@ public class MainDatabase
 
     private static MainDatabase? s_instance;
 
-    //private const string CONNECTION_URL = "mongodb+srv://<username>:<password>@cluster0.gefnhnd.mongodb.net/?retryWrites=true&w=majority";
-    private const string CONNECTION_URL = "mongodb://<address>:<port>/?authSource=admin";
-
     private ILogger<DiscordBotWorker>? _logger = null;
     private IConfiguration? _config = null;
 
@@ -53,7 +50,7 @@ public class MainDatabase
     private MainDatabase(IConfiguration config)
     {
         // Replace formats.
-        _url = CONNECTION_URL
+        _url = config["CONNECTION_URL"]
             .Replace("<username>", config["MONGO_USER"])
             .Replace("<password>", config["MONGO_PW"])
             .Replace("<address>", config["ADDRESS"])
