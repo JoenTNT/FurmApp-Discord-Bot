@@ -63,7 +63,6 @@ public class MainDatabase
         _settings = MongoClientSettings.FromConnectionString(_url);
         _settings.ServerApi = new ServerApi(ServerApiVersion.V1);
         //_settings.DirectConnection = true; // Local connection only
-        _settings.
     }
 
     #endregion
